@@ -12,7 +12,6 @@ class Suspect(BaseModel):
     last_known_location: Optional[str] = None
     
 class CallInfo(BaseModel):
-    call_id: int
     caller_name: str
     location: str
     urgency: Optional[str] = None
