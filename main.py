@@ -3,8 +3,18 @@ from fastapi import FastAPI
 from models import Suspect, CallInfo
 from pydantic import BaseModel
 from datetime import datetime
+import firebase_admin
+import dotenv
+from firebase_admin import firestore
+
+dotenv.load_dotenv()
 
 app = FastAPI()
+default_app = firebase_admin.initialize_app()
+db = firestore.client()
+
+
+print("Current App Name:", default_app.project_id)
 
 
 @app.get("/")
@@ -68,8 +78,10 @@ class WebhookPayload(BaseModel):
 
 
 @app.post("/info/")
-async def case_info(call_info: WebhookPayload):
-    # print("HERE IS INFO")
-    # print(call_info)
-    print(call_info.message.functionCall.parameters)
-    return call_info
+def case_info(call_info: WebhookPayload):
+    print(call_info)
+    doc_ref = db.collection('calls').document()
+    print("DOC_REF", doc_ref)
+    call_info_dict = call_info.model_dump()
+    doc_ref.set(call_info_dict)
+    return {"message": "Call info added successfully"}
