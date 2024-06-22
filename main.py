@@ -9,9 +9,6 @@ app = FastAPI()
 def read_root():
     return {"Hello": "World"}
 
-
-@app.post("/info/")
-
 @app.post("/info/")
 async def case_info(call_info: CallInfo):
     return call_info
