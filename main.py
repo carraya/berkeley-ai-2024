@@ -6,8 +6,12 @@ from datetime import datetime
 import firebase_admin
 import dotenv
 from firebase_admin import firestore
+import openai
+import os
 
 dotenv.load_dotenv()
+
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 default_app = firebase_admin.initialize_app()
@@ -77,8 +81,22 @@ class WebhookPayload(BaseModel):
     message: FunctionCallMessage
 
 
+
+import time
+from threading import Lock
+
+last_call_time = 0
+lock = Lock()
+
 @app.post("/info/")
-def case_info(call_info: WebhookPayload):
+def case_info(call_info: Any):
+    global last_call_time
+    with lock:
+        current_time = time.time()
+        if current_time - last_call_time < 1:
+            return {"message": "Too many requests. Please try again later."}
+        last_call_time = current_time
+
     print(call_info)
     doc_ref = db.collection('calls').document()
     print("DOC_REF", doc_ref)
