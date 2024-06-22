@@ -49,7 +49,7 @@ class Call(BaseModel):
 
 
 class Message(BaseModel):
-    role: str
+    role: Optional[str] = None
     message: Optional[str] = None
     time: float
     endTime: Optional[float] = None
@@ -72,9 +72,13 @@ class Artifact(BaseModel):
 
 class FunctionCallMessage(BaseModel):
     type: str
-    functionCall: FunctionCall
+    role: Optional[str] = None
+    transcriptType: Optional[str] = None
+    transcript: Optional[str] = None
+    # functionCall: FunctionCall
     call: Call
     artifact: Artifact
+    timestamp: datetime
 
 
 class WebhookPayload(BaseModel):
