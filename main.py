@@ -1,10 +1,6 @@
-from threading import Lock
 import threading
-from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, Request
-from models import Suspect, CallInfo
-from pydantic import BaseModel
-from datetime import datetime
+from models import WebhookPayload, ToolCallResponse, ToolCallResult
 import firebase_admin
 import dotenv
 from firebase_admin import firestore
@@ -32,75 +28,65 @@ def read_root():
     return {"Hello": "World"}
 
 
-class FunctionCall(BaseModel):
-    name: str
-    parameters: Dict[str, Optional[str]] = {}
-
-
-class ToolCall(BaseModel):
-    id: str
-    type: str
-    function: FunctionCall
-
-
-class Call(BaseModel):
-    id: str
-    orgId: str
-    createdAt: datetime
-    updatedAt: datetime
-    type: str
-    status: str
-    assistantId: Optional[str] = None
-    webCallUrl: Optional[str] = None
-
-
-class Message(BaseModel):
-    role: Optional[str] = None
-    message: Optional[str] = None
-    time: float
-    endTime: Optional[float] = None
-    secondsFromStart: float
-    source: Optional[str] = ""
-    duration: Optional[float] = None
-    toolCalls: Optional[List[ToolCall]] = None
-
-
-class OpenAIFormattedMessage(BaseModel):
-    role: str
-    content: Optional[str] = None
-    tool_calls: Optional[List[ToolCall]] = None
-
-
-class Artifact(BaseModel):
-    messages: List[Message]
-    messagesOpenAIFormatted: List[OpenAIFormattedMessage]
-
-
-class FunctionCallMessage(BaseModel):
-    type: str
-    role: Optional[str] = None
-    transcriptType: Optional[str] = None
-    transcript: Optional[str] = None
-    # functionCall: FunctionCall
-    call: Call
-    artifact: Artifact
-    timestamp: datetime
-
-
-class WebhookPayload(BaseModel):
-    message: FunctionCallMessage
-
-
 # Dictionary to store locks for each call_id
 call_locks = {}
 lock_dict_lock = threading.Lock()
+
+
+ICON_LIST = ["FireHydrant", "Firetruck", "Flame", "Car", "Plane",
+             "User", "Users", "Old", "ClipboardHeart", "Vaccine"]
+
+
+def get_summary_and_icon(conversation: str, dispatch_info: str):
+    # Get short summary
+    summary_prompt = f"""
+    Summarize the following emergency situation in 3-4 words.
+    Respond ONLY with the summary, nothing else.
+
+    Emergency details:
+    Dispatch Information: {dispatch_info}
+    Conversation Transcript: {conversation}
+
+    3-4 word summary:
+    """
+
+    summary_response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": summary_prompt}],
+        max_tokens=20,  # Limiting to ensure a short response
+        temperature=0.3  # Lower temperature for more focused output
+    )
+    short_summary = summary_response.choices[0].message.content.strip()
+
+    # Get icon
+    icon_prompt = f"""
+    Select the most appropriate icon for this emergency situation from the list below.
+    Respond ONLY with the icon name, nothing else. Make sure it keeps exact case and spelling.
+
+    Emergency details:
+    Dispatch Information: {dispatch_info}
+    Conversation Transcript: {conversation}
+
+    Icon options: {ICON_LIST}
+
+    Selected icon:
+    """
+
+    icon_response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": icon_prompt}],
+        max_tokens=20,  # Limiting to ensure a single icon
+        temperature=0.3  # Lower temperature for more focused output
+    )
+    selected_icon = icon_response.choices[0].message.content.strip()
+
+    return short_summary, selected_icon
 
 
 @app.post("/info/")
 def case_info(call_info: WebhookPayload):
     call_id = call_info.message.call.id
 
-    # Acquire the lock for this specific call_id
     with lock_dict_lock:
         if call_id not in call_locks:
             call_locks[call_id] = threading.Lock()
@@ -126,9 +112,7 @@ def case_info(call_info: WebhookPayload):
                 content = message.content
                 if content:
                     conversation += f"{role}: {content}\n"
-            print(f"THE CONVERSATION for call {call_id}:", conversation)
 
-            # Get the current document data
             doc = doc_ref.get()
             if doc.exists:
                 current_data = doc.to_dict()
@@ -137,15 +121,12 @@ def case_info(call_info: WebhookPayload):
                 current_data = {}
                 existing_situation = {}
 
-            # Add createdDate if it doesn't exist
             if 'createdDate' not in current_data:
                 current_data['createdDate'] = int(time.time())
 
-            # Set callStatus to "active" if it doesn't exist
             if 'callStatus' not in current_data:
                 current_data['callStatus'] = 'active'
 
-            # Prepare the prompt with existing situation and new conversation
             prompt = f"""
             Given the existing situation details:
             {json.dumps(existing_situation, indent=2)}
@@ -160,25 +141,30 @@ def case_info(call_info: WebhookPayload):
             """
 
             try:
-                response = openai.chat.completions.create(
+                response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": "user", "content": prompt}],
                     response_format={"type": "json_object"}
                 )
-                print(f"OpenAI response for call {call_id}:", response)
 
                 res = response.choices[0].message.content
                 new_info = json.loads(res)
 
-                # Merge new information with existing situation
                 for key, value in new_info.items():
                     if key not in existing_situation or existing_situation[key] != value:
                         existing_situation[key] = value
 
-                # Update the situation field in the current data
                 current_data['situation'] = existing_situation
 
-                # Set the updated data back to Firestore
+                # Get summary and icon
+                dispatch_info = current_data.get(
+                    'dispatchInformation', 'No dispatch information available.')
+                short_summary, selected_icon = get_summary_and_icon(
+                    conversation, dispatch_info)
+
+                current_data['shortSummary'] = short_summary
+                current_data['icon'] = selected_icon
+
                 doc_ref.set(current_data)
 
                 return {"message": f"Situation updated successfully for call {call_id}"}
@@ -187,65 +173,31 @@ def case_info(call_info: WebhookPayload):
                 raise HTTPException(
                     status_code=500, detail=f"Error processing request: {str(e)}")
 
-    # Clean up the lock if the call is ended
-    if call_info.message.type == "end-of-call-report":
-        with lock_dict_lock:
-            call_locks.pop(call_id, None)
-
     return {"message": "Request processed"}
 
 
-handler = Mangum(app=app)
-
-
-class ToolCallResult(BaseModel):
-    toolCallId: str
-    result: str  # This should be a string, not a dict
-
-
-class ToolCallResponse(BaseModel):
-    results: List[ToolCallResult]
-
-
 @app.post("/dispatch/")
-async def handle_tool_call(call_info: WebhookPayload):
+async def handle_dispatch(call_info: WebhookPayload):
     tool_call_id = call_info.message.call.id
 
-    # Process the tool call and get the result
-    emergency_info = get_emergency_info()
+    doc_ref = db.collection("calls").document(tool_call_id)
+    doc = doc_ref.get()
 
-    result_data = {
-        "incident_id": emergency_info["incident_id"],
-        "emergency_type": emergency_info["type"],
-        "location": emergency_info["location"],
-        "coordinates": emergency_info["coordinates"],
-        "severity": emergency_info["severity"],
-        "units_dispatched": emergency_info["units_dispatched"],
-        "eta_minutes": emergency_info["eta_minutes"],
-        "caller_instructions": emergency_info["caller_instructions"],
-        "additional_resources": emergency_info["additional_resources"],
-        "evacuation_status": emergency_info["evacuation_status"],
-        "dispatch_summary": (
-            f"Incident #{emergency_info['incident_id']}: A {
-                emergency_info['severity']} {emergency_info['type']} "
-            f"emergency at {emergency_info['location']
-                            } ({emergency_info['coordinates']}). "
-            f"{emergency_info['units_dispatched']} units dispatched, ETA {
-                emergency_info['eta_minutes']} minutes. "
-            f"Evacuation status: {emergency_info['evacuation_status']}."
-        )
-    }
-
-    # Convert the entire result_data to a JSON string
-    result_json_string = json.dumps(result_data)
+    dispatch_information = None
+    if doc.exists:
+        call_data = doc.to_dict()
+        dispatch_information = call_data.get(
+            'dispatchInformation', "We need to gather more information to dispatch help.")
 
     response = ToolCallResponse(
         results=[
             ToolCallResult(
                 toolCallId=tool_call_id,
-                result="There are 3 fire engines, 1 ladder truck, 1 rescue unit"
+                result=dispatch_information
             )
         ]
     )
     # print(response)
     return response.dict()
+
+handler = Mangum(app=app)
