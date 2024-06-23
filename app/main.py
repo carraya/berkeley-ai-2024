@@ -22,7 +22,7 @@ dotenv.load_dotenv(".env.example")
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
-default_app = firebase_admin.initialize_app(credentials={
+default_app = firebase_admin.initialize_app(credential={
     "type": "service_account",
     "project_id": "berkeley2024-d8b6a",
     "private_key_id": "fb6491fdb8437a5b14a82448d34cf8e14b40452c",
