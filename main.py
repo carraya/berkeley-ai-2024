@@ -208,42 +208,25 @@ class ToolCallResponse(BaseModel):
 
 
 @app.post("/dispatch/")
-async def handle_tool_call(call_info: WebhookPayload):
+async def handle_dispatch(call_info: WebhookPayload):
     tool_call_id = call_info.message.call.id
 
-    # Process the tool call and get the result
-    emergency_info = get_emergency_info()
+    doc_ref = db.collection("calls").document(tool_call_id)
+    doc = doc_ref.get()
 
-    result_data = {
-        "incident_id": emergency_info["incident_id"],
-        "emergency_type": emergency_info["type"],
-        "location": emergency_info["location"],
-        "coordinates": emergency_info["coordinates"],
-        "severity": emergency_info["severity"],
-        "units_dispatched": emergency_info["units_dispatched"],
-        "eta_minutes": emergency_info["eta_minutes"],
-        "caller_instructions": emergency_info["caller_instructions"],
-        "additional_resources": emergency_info["additional_resources"],
-        "evacuation_status": emergency_info["evacuation_status"],
-        "dispatch_summary": (
-            f"Incident #{emergency_info['incident_id']}: A {
-                emergency_info['severity']} {emergency_info['type']} "
-            f"emergency at {emergency_info['location']
-                            } ({emergency_info['coordinates']}). "
-            f"{emergency_info['units_dispatched']} units dispatched, ETA {
-                emergency_info['eta_minutes']} minutes. "
-            f"Evacuation status: {emergency_info['evacuation_status']}."
-        )
-    }
+    dispatch_information = "There is no dispatch information available."
+    if doc.exists:
+        call_data = doc.to_dict()
+        dispatch_information = call_data.get('dispatchInformation', False)
 
-    # Convert the entire result_data to a JSON string
-    result_json_string = json.dumps(result_data)
+        if dispatch_information:
+            dispatch_information = call_data.get('dispatchInformation', None)
 
     response = ToolCallResponse(
         results=[
             ToolCallResult(
                 toolCallId=tool_call_id,
-                result="There are 3 fire engines, 1 ladder truck, 1 rescue unit"
+                result=dispatch_information
             )
         ]
     )
