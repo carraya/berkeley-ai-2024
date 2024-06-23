@@ -25,20 +25,19 @@
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background-color: #22c55e1a;
+    background-color: #ef44441a; /* Changed from #22c55e1a to a light red */
     padding: 4px;
-  }
+}
   
-  .marker::before {
+.marker::before {
     content: '';
     position: absolute;
     width: 12px;
     height: 12px;
-    background-color: #22c55e;
+    background-color: #ef4444; /* Changed from #22c55e to red */
     border-radius: 50%;
     animation: blinkMarker 1s infinite;
-  }
-  
+}
   @keyframes blinkMarker {
     0% {
       opacity: 1;

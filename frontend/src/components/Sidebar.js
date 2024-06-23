@@ -366,15 +366,15 @@ export const Sidebar = ({ handleMouseEnter, handleMouseLeave, handleCallClick })
           <div style={{ gap: "-2px", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <div className="text-wrapper-5">
         {"Built by "}
-        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Christopher Arraya</a>
+        <a href="https://twitter.com/cjarrayadev" style={{ textDecoration: "underline" }}>Christopher Arraya</a>
         {"  "}
-        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Taha Ansari</a>
+        <a href="https://x.com/tahaha_a" style={{ textDecoration: "underline" }}>Taha Ansari</a>
         {""}
       </div>
       <div className="text-wrapper-5">
-        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Jack Blair</a>
+        <a href="https://x.com/JackBlair87" style={{ textDecoration: "underline" }}>Jack Blair</a>
         {"  "}
-        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Richard Zhang</a>
+        <a href="https://twitter.com/rzhang139" style={{ textDecoration: "underline" }}>Richard Zhang</a>
       </div>
     </div>
         </div>

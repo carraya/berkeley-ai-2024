@@ -240,7 +240,7 @@ const Map = () => {
         if (!call.location) continue;
 
         //make sure callStatus is active
-        // if (call.callStatus !== "active") continue;
+        if (call.callStatus !== "active") continue;
 
         try {
           const response = await geocoder.forwardGeocode({
