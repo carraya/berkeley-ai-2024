@@ -8,6 +8,7 @@ import dotenv
 from firebase_admin import firestore
 import openai
 import os
+import json
 
 dotenv.load_dotenv()
 
@@ -45,7 +46,7 @@ class Call(BaseModel):
     type: str
     status: str
     assistantId: str
-    webCallUrl: str
+    webCallUrl: Optional[str] = None
 
 
 class Message(BaseModel):
@@ -93,17 +94,37 @@ last_call_time = 0
 lock = Lock()
 
 @app.post("/info/")
-def case_info(call_info: Any):
+def case_info(call_info: WebhookPayload):
     global last_call_time
+    call_id = call_info.message.call.id
     with lock:
         current_time = time.time()
-        if current_time - last_call_time < 1:
+        if isinstance(last_call_time, int):
+            last_call_time = {}
+        if call_id in last_call_time and current_time - last_call_time[call_id] < 1:
             return {"message": "Too many requests. Please try again later."}
-        last_call_time = current_time
+        last_call_time[call_id] = current_time
 
-    print(call_info)
-    doc_ref = db.collection('calls').document()
-    print("DOC_REF", doc_ref)
-    call_info_dict = call_info.model_dump()
-    doc_ref.set(call_info_dict)
-    return {"message": "Call info added successfully"}
+    if call_info.message.type == "transcript":
+        messages = call_info.message.artifact.messagesOpenAIFormatted
+        conversation = ""
+        for message in messages:
+            role = message.role
+            content = message.content
+            if content:
+                conversation += f"{role}: {content}\n"
+        print(conversation)
+    
+    
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": f"Extract situation details/information from the following 911 operator transcript and provide it in JSON format. IF THE INFORMATION IS NOT GIVEN, DO NOT ATTEMPT TO FILL THAT ATTRIBUTE IN THE JSON. RETURN NONE IF NO VALUABLE INFORMATION CAN BE EXTRACTED. QUOTE THE USER FOR EACH PIECE OF INFORMATION YOU RECORD IN THE FOLLOWING STRUCUTRE: {{'location': {{'source': '<user quote>', 'info': '<extracted information>'}}}}:\n\n{conversation}"}],
+            response_format={ "type": "json_object" }
+        )
+        print(response)
+        
+        doc_ref = db.collection('calls').document(call_info.message.call.id)
+        res = response.choices[0].message.content
+        res_json = json.loads(res)
+        doc_ref.set({"situation": res_json})
+        return {"message": "Situation added successfully"}
