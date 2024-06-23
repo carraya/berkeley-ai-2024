@@ -91,6 +91,29 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      
+      - name: Wait for Lambda update to complete
+        id: wait-for-update
+        run: |
+          function_name="ai-berkeley-2024-BE"
+          while true; do
+            status=$(aws lambda get-function-configuration --function-name $function_name --query 'LastUpdateStatus' --output text)
+            if [ "$status" = "Successful" ]; then
+              echo "Lambda update completed"
+              break
+            elif [ "$status" = "InProgress" ]; then
+              echo "Lambda update in progress, waiting..."
+              sleep 10
+            else
+              echo "Unexpected status: $status"
+              exit 1
+            fi
+          done
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+
 
       - name: Update Lambda Environment Variables
         run: |
