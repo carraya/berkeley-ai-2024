@@ -1,7 +1,7 @@
 import mapboxgl from 'mapbox-gl';
 import React, { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import geoJson from './chicago-parks.json';
+import geoJson from '../pages/chicago-parks.json';
 import './Map.css';
 
 mapboxgl.accessToken =

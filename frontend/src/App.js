@@ -3,7 +3,6 @@ import { Provider } from "react-redux";
 import React from "react";
 import store from "./redux/store";
 import Dashboard from "./pages/dashboard";
-import Map from "./pages/Map";
 
 const GA_TRACKER_ID = process.env.REACT_APP_GA_TRACKER_ID;
 const GA_DEBUG_MODE = process.env.REACT_APP_GA_DEBUG_MODE === "true";
@@ -24,14 +23,7 @@ function App() {
 
   return (
     <Provider store={store}>
-      <div className="app-container">
-        <div className="dashboard-panel">
           <Dashboard />
-        </div>
-        <div className="map-container">
-          <Map />
-        </div>
-      </div>
     </Provider>
   );
 }
