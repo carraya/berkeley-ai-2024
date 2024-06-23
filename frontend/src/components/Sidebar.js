@@ -260,9 +260,22 @@ const StyledVerticalBorder = styled.div`
   }
 `;
 
+
+const HoverModal = styled.div`
+  position: fixed;
+  background-color: black;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  z-index: 1000;
+  pointer-events: none;
+  transition: opacity 0.2s ease-in-out;
+`;
+
 export const Sidebar = () => {
-    const calls = useSelector(state => state.calls);
+  const calls = useSelector(state => state.calls);
   const [expandedCall, setExpandedCall] = useState(null);
+  const [hoverInfo, setHoverInfo] = useState(null);
 
   useEffect(() => {
     const unsubscribe = setupCallsListener();
@@ -273,6 +286,19 @@ export const Sidebar = () => {
 
   const toggleExpand = (callId) => {
     setExpandedCall(expandedCall === callId ? null : callId);
+  };
+
+  const handleMouseEnter = (e, call) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoverInfo({
+      id: call.id,
+      x: rect.left + window.scrollX + rect.width / 2,
+      y: rect.top + window.scrollY - 40, // Position above the call chip
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHoverInfo(null);
   };
 
   const sortedCalls = [...calls].sort((a, b) => b.createdDate - a.createdDate);
@@ -295,10 +321,16 @@ export const Sidebar = () => {
         </div>
         <div className="nav">
           {sortedCalls.map((call) => {
-            const IconToBeUsed = allIcons[call.icon] || allIcons['Activity']; // Fallback to a default icon if icon not found
+            const IconToBeUsed = allIcons[call.icon] || allIcons['Activity'];
 
             return (
-              <div className="link" key={call.id} onClick={() => toggleExpand(call.id)}>
+              <div 
+                className="link" 
+                key={call.id} 
+                onClick={() => toggleExpand(call.id)}
+                onMouseEnter={(e) => handleMouseEnter(e, call)}
+                onMouseLeave={handleMouseLeave}
+              >
                 <div className="frame-2">
                   <div className="frame-3">
                     <IconToBeUsed size={26} color="#ffffff" />
@@ -308,30 +340,40 @@ export const Sidebar = () => {
                       </div>
                     </div>
                   </div>
-                  {call.callStatus === "active" ? (
-                  <div className="group">
-                    <div className="container-wrapper">
-                      <div className="overlay-wrapper">
-                        <div className="overlay">
-                          <div className="background-wrapper">
-                            <div className="background" />
-                          </div>
-                          <div className="margin">
-                            <div className="text-wrapper-4">Live</div>
+                  {call.callStatus === "active" && (
+                    <div className="group">
+                      <div className="container-wrapper">
+                        <div className="overlay-wrapper">
+                          <div className="overlay">
+                            <div className="background-wrapper">
+                              <div className="background" />
+                            </div>
+                            <div className="margin">
+                              <div className="text-wrapper-4">Live</div>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  ) : null}
-                 
+                  )}
                 </div>
               </div>
-              );
-            })}
-          </div>
+            );
+          })}
+        </div>
         <div className="text-wrapper-5">Built by Yo Mama</div>
       </div>
+      {hoverInfo && (
+        <HoverModal
+          style={{
+            left: `${hoverInfo.x}px`,
+            top: `${hoverInfo.y}px`,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          Call ID: {hoverInfo.id}
+        </HoverModal>
+      )}
     </StyledVerticalBorder>
   );
 };
