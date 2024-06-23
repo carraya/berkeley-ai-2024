@@ -146,16 +146,18 @@ const Map = () => {
       });
 
       currentIndex = (currentIndex + 1) % markers.length;
-      animationRef.current = requestAnimationFrame(() => {
-        setTimeout(animateCamera, 3000); // Wait for 3 seconds before moving to the next marker
-      });
+      
+      // Schedule the next animation
+      animationRef.current = setTimeout(() => {
+        requestAnimationFrame(animateCamera);
+      }, 6000); // 3 seconds for animation + 3 seconds pause
     };
 
     animateCamera();
 
     return () => {
       if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
+        clearTimeout(animationRef.current);
       }
     };
   }, [markers]);
