@@ -129,13 +129,13 @@ def case_info(call_info: WebhookPayload):
     logger.error("WE'RE IN")
     logger.trace("WE'RE IN")
                          
-    with lock:
-        current_time = time.time()
-        if isinstance(last_call_time, int):
-            last_call_time = {}
-        if call_id in last_call_time and current_time - last_call_time[call_id] < 1:
-            return {"message": "Too many requests. Please try again later."}
-        last_call_time[call_id] = current_time
+    # with lock:
+    #     current_time = time.time()
+    #     if isinstance(last_call_time, int):
+    #         last_call_time = {}
+    #     if call_id in last_call_time and current_time - last_call_time[call_id] < 1:
+    #         return {"message": "Too many requests. Please try again later."}
+    #     last_call_time[call_id] = current_time
 
     if call_info.message.type == "transcript":
         messages = call_info.message.artifact.messagesOpenAIFormatted
