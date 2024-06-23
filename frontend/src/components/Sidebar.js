@@ -1,5 +1,10 @@
-import React from "react";
 import styled from "styled-components";
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { ago } from '../backend/util';
+import { setupCallsListener } from '../backend/subscriptions';
+import * as allIcons from "tabler-icons-react";
+
 
 const StyledVerticalBorder = styled.div`
   align-items: flex-start;
@@ -12,9 +17,8 @@ const StyledVerticalBorder = styled.div`
   justify-content: center;
   padding: 16px 0.56px 0px 0px;
   position: relative;
-  width: 300px;
+  width: 350px;
   user-select: none;
-  height: 100vh;
 
   & .container {
     align-items: center;
@@ -53,7 +57,7 @@ const StyledVerticalBorder = styled.div`
     color: #FFFFFF;
     font-family: "SF Pro Text-Semibold", Helvetica;
     font-size: 18px;
-    font-weight: 400;
+    font-weight: 600;
     letter-spacing: 0;
     line-height: 28px;
     margin-top: -1px;
@@ -72,7 +76,7 @@ const StyledVerticalBorder = styled.div`
   }
 
   & .p {
-    color: var(--dashboardmintlifycomnero-40);
+    color: #A1A1AA;
     font-family: "SF Pro Text-Regular", Helvetica;
     font-size: 14px;
     font-weight: 400;
@@ -130,6 +134,10 @@ const StyledVerticalBorder = styled.div`
     position: relative;
     width: 100%;
   }
+
+  & .link:hover {
+    background-color: #ffffff1a; // Make the background slightly brighter on hover
+}
 
   & .frame-2 {
     align-items: center;
@@ -253,6 +261,22 @@ const StyledVerticalBorder = styled.div`
 `;
 
 export const Sidebar = () => {
+    const calls = useSelector(state => state.calls);
+  const [expandedCall, setExpandedCall] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = setupCallsListener();
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const toggleExpand = (callId) => {
+    setExpandedCall(expandedCall === callId ? null : callId);
+  };
+
+  const sortedCalls = [...calls].sort((a, b) => b.createdDate - a.createdDate);
+
   return (
     <StyledVerticalBorder>
       <div className="container">
@@ -270,79 +294,42 @@ export const Sidebar = () => {
           <div className="text-wrapper-2">Recent Emergency Calls</div>
         </div>
         <div className="nav">
-          <div className="link">
-            <div className="frame-2">
-              <div className="frame-3">
-                <img className="img" alt="Container" src="container.svg" />
-                <div className="div">
-                  <div className="text-wrapper-3">Robbery at Berkeley</div>
-                </div>
-              </div>
-              <div className="group">
-                <div className="container-wrapper">
-                  <div className="overlay-wrapper">
-                    <div className="overlay">
-                      <div className="background-wrapper">
-                        <div className="background" />
-                      </div>
-                      <div className="margin">
-                        <div className="text-wrapper-4">Live</div>
+          {sortedCalls.map((call) => {
+            const IconToBeUsed = allIcons[call.icon] || allIcons['Activity']; // Fallback to a default icon if icon not found
+
+            return (
+              <div className="link" key={call.id} onClick={() => toggleExpand(call.id)}>
+                <div className="frame-2">
+                  <div className="frame-3">
+                    <IconToBeUsed size={26} color="#ffffff" />
+                    <div className="div">
+                      <div className="text-wrapper-3">
+                        {call.shortSummary ? call.shortSummary : ""}
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="link">
-            <div className="frame-2">
-              <div className="frame-3">
-                <img className="img" alt="Container" src="image.svg" />
-                <div className="div">
-                  <div className="text-wrapper-3">Robbery at Berkeley</div>
-                </div>
-              </div>
-              <div className="group">
-                <div className="container-wrapper">
-                  <div className="overlay-wrapper">
-                    <div className="overlay">
-                      <div className="background-wrapper">
-                        <div className="background" />
-                      </div>
-                      <div className="margin">
-                        <div className="text-wrapper-4">Live</div>
+                  {call.callStatus === "active" ? (
+                  <div className="group">
+                    <div className="container-wrapper">
+                      <div className="overlay-wrapper">
+                        <div className="overlay">
+                          <div className="background-wrapper">
+                            <div className="background" />
+                          </div>
+                          <div className="margin">
+                            <div className="text-wrapper-4">Live</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
+                  ) : null}
+                 
                 </div>
               </div>
-            </div>
+              );
+            })}
           </div>
-          <div className="link">
-            <div className="frame-2">
-              <div className="frame-3">
-                <img className="img" alt="Container" src="container-2.svg" />
-                <div className="div">
-                  <div className="text-wrapper-3">Robbery at Berkeley</div>
-                </div>
-              </div>
-              <div className="group">
-                <div className="container-wrapper">
-                  <div className="overlay-wrapper">
-                    <div className="overlay">
-                      <div className="background-wrapper">
-                        <div className="background" />
-                      </div>
-                      <div className="margin">
-                        <div className="text-wrapper-4">Live</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
         <div className="text-wrapper-5">Built by Yo Mama</div>
       </div>
     </StyledVerticalBorder>
