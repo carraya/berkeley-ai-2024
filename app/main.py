@@ -25,7 +25,6 @@ app = FastAPI()
 default_app = firebase_admin.initialize_app()
 db = firestore.client()
 
-handler = Mangum(app=app)
 
 print("Current App Name:", default_app.project_id)
 
@@ -125,21 +124,24 @@ def case_info(call_info: WebhookPayload):
             content = message.content
             if content:
                 conversation += f"{role}: {content}\n"
-        handler.logger.info(conversation)
-        handler.logger.trace(conversation)
-        handler.logger.error(conversation)
-    
+        logger.info(conversation)
+        
+        logger.trace(conversation)
+        logger.error(conversation)
+   
         response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": f"Extract situation details/information from the following 911 operator transcript and provide it in JSON format. IF THE INFORMATION IS NOT GIVEN, DO NOT ATTEMPT TO FILL THAT ATTRIBUTE IN THE JSON. RETURN NONE IF NO VALUABLE INFORMATION CAN BE EXTRACTED. QUOTE THE USER FOR EACH PIECE OF INFORMATION YOU RECORD IN THE FOLLOWING STRUCUTRE: {{'location': {{'source': '<user quote>', 'info': '<extracted information>'}}}}:\n\n{conversation}"}],
             response_format={ "type": "json_object" }
         )
-        handler.logger.info(response)
-        handler.logger.trace(response)
-        handler.logger.error(response)
-        
+        logger.info(response)
+        logger.trace(response)
+        logger.error(response)
+       
         doc_ref = db.collection('calls').document(call_info.message.call.id)
         res = response.choices[0].message.content
         res_json = json.loads(res)
         doc_ref.set({"situation": res_json})
         return {"message": "Situation added successfully"}
+    
+handler = Mangum(app=app, lifespan="off")
