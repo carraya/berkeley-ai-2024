@@ -61,13 +61,13 @@ def get_summary_and_icon(conversation: str, dispatch_info: str):
     # Get icon
     icon_prompt = f"""
     Select the most appropriate icon for this emergency situation from the list below.
-    Respond ONLY with the icon name, nothing else.
+    Respond ONLY with the icon name, nothing else. Make sure it keeps exact case and spelling.
 
     Emergency details:
     Dispatch Information: {dispatch_info}
     Conversation Transcript: {conversation}
 
-    Icon options: fire-extinguisher, firetruck, flame, car, user, users, old, clipboard-heart, vaccine
+    Icon options: {ICON_LIST}
 
     Selected icon:
     """
