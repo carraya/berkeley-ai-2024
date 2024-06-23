@@ -1,6 +1,6 @@
 import threading
 from fastapi import FastAPI, Request
-from models import WebhookPayload, ToolCallResponse, ToolCallResult
+from models import WebhookPayload, ToolCallResponse, ToolCallResult, FunctionCallingPayload
 import firebase_admin
 import dotenv
 from firebase_admin import firestore
@@ -126,6 +126,49 @@ def case_info(call_info: WebhookPayload):
 
             if 'callStatus' not in current_data:
                 current_data['callStatus'] = 'active'
+                
+            if 'location' in current_data:
+                triage_prompt = f"""
+                You are a 911 operator in Los Angeles, handling behavioral health crisis calls. Use the following decision matrix to determine the appropriate response for each caller:
+
+                **Risk Levels and Corresponding Responses:**
+
+                1. **No Crisis/Resolved (Level 1)**
+                    - **Criteria:** Caller needs support/services but not in immediate risk.
+                    - **Response:** No field response required. Transfer to DMH access call center for priority line and potential peer access network referral. May request peer-response organization to assist in the "navigator" role.
+                    
+                2. **Immediate Risk (Level 2)**
+                    - **Criteria:** Caller is in crisis but can accept immediate remote help. Includes suicidal subjects not posing an immediate threat to others.
+                    - **Response:** No field response unless call assessment level changes. Live transfer to Didi Hirsch Suicide Prevention Center.
+
+                3. **Moderate Risk (Level 3)**
+                    - **Criteria:** Caller needs help in person. The public is not in immediate danger, but field response is necessary. The caller may be a danger to self, others, or gravely disabled.
+                    - **Response:** Dispatch DMH psychiatric mobile response team (PMRT) or DMH van or other psych evaluation team (PET). DMH access call center will dispatch non-law enforcement team.
+
+                4. **Higher Risk (Level 4)**
+                    - **Criteria:** Immediate threat to public safety or crime. The caller or someone else is in immediate danger besides a lone suicidal subject. The subject is threatening others' personal safety/property, observed with or known access to a dangerous weapon, or reported crime requiring some level of investigation.
+                    - **Response:** Dispatch patrol (B&W) units and/or Smart/MET co-response team. Future 988 linkage to 911 system for transfer if needed.
+
+                ---
+
+                **Conversation:**
+
+                {conversation}
+
+                ---
+
+                Based on the details provided by the caller, determine whether to dispatch police, fire, and/or ambulance units. The JSON output structure should be {{'police': <boolean>, 'fire': <boolean>, 'ambulance': <boolean>}}.
+                """
+                
+                triage_res = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": triage_prompt}],
+                    response_format={"type": "json_object"}
+                )
+                
+                dis_info = json.loads(triage_res.choices[0].message.content)
+                current_data["dispatchInformation"] = dis_info
+                
 
             prompt = f"""
             Given the existing situation details:
@@ -201,3 +244,71 @@ async def handle_dispatch(call_info: WebhookPayload):
     return response.dict()
 
 handler = Mangum(app=app)
+
+import requests
+SERP_API_KEY = "efb7ab91a902926c12b290ef01a5c2b66f8cc08e5270d0f60079866313bec533"
+
+
+def get_address_serp(location: str):
+    url = 'https://serpapi.com/search?engine=google_maps'
+
+    params = {
+        "engine": "google_maps",
+        "type": "search",
+        "google_domain": "google.com",
+        "q": location,
+        "hl": "en",
+        "api_key": SERP_API_KEY
+    }
+
+    try:
+        # Send GET request
+        response = requests.get(url, params=params)
+
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            data = response.json()  # Convert response to JSON format
+
+            print(json.dumps(data, indent=4))
+            return data
+        else:
+            print(
+                f"Request failed with status code {response.status_code} {response.json()}"
+            )
+
+    except requests.RequestException as e:
+        print(f"Request failed: {e}")
+
+    # search = GoogleSearch(params)
+    # results = search.get_dict()
+    
+
+# data["local_results"][0]["address"]
+
+@app.post("/address/")
+def get_address(address: FunctionCallingPayload):
+    call_id = address.message.call.id
+    with lock_dict_lock:
+        if call_id not in call_locks:
+            call_locks[call_id] = threading.Lock()
+    with call_locks[call_id]:
+        print("HERE AGAIN")
+        if address.message.functionCall.parameters['location'] != '':
+            call_id = address.message.call.id
+            print("CALL_ID=====",call_id)
+            doc_ref = db.collection('calls').document(call_id)
+            doc = doc_ref.get()
+            if doc.exists:
+                current_data = doc.to_dict()
+                structured_address = get_address_serp(address.message.functionCall.parameters['location'])
+                if "place_results" in structured_address:
+                    current_data['location'] = structured_address["place_results"]["address"]
+                elif "local_results" in structured_address:
+                    current_data['location'] = structured_address["local_results"][0]["address"]
+                else:
+                    current_data['location'] = "Unable to find address"
+                print("CURRENT_DATA=====",current_data)
+                doc_ref.set(current_data)
+                return {"message": "Location updated successfully"}
+            else:
+                return {"message": "Call not found"}
