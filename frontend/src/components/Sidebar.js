@@ -1,8 +1,7 @@
 import styled from "styled-components";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { ago } from '../backend/util';
-import { setupCallsListener } from '../backend/subscriptions';
 import * as allIcons from "tabler-icons-react";
 
 
@@ -17,7 +16,7 @@ const StyledVerticalBorder = styled.div`
   justify-content: center;
   padding: 16px 0.56px 0px 0px;
   position: relative;
-  width: 350px;
+  width: 450px;
   user-select: none;
 
   & .container {
@@ -133,9 +132,10 @@ const StyledVerticalBorder = styled.div`
     padding: 8px;
     position: relative;
     width: 100%;
-  }
+    transition: background-color 0.3s ease; // Add smooth hover animation
+}
 
-  & .link:hover {
+& .link:hover {
     background-color: #ffffff1a; // Make the background slightly brighter on hover
 }
 
@@ -222,7 +222,20 @@ const StyledVerticalBorder = styled.div`
     height: 6px;
     position: relative;
     width: 6px;
+    animation: blinkBackground 1s infinite; // Add blinking animati
   }
+
+  @keyframes blinkBackground {
+    0% {
+        background-color: #22c55e;
+    }
+    50% {
+        background-color: transparent;
+    }
+    100% {
+        background-color: #22c55e;
+    }
+}
 
   & .margin {
     align-items: flex-start;
@@ -282,13 +295,6 @@ export const Sidebar = () => {
   const calls = useSelector(state => state.calls);
   const [expandedCall, setExpandedCall] = useState(null);
   const [hoverInfo, setHoverInfo] = useState(null);
-
-  useEffect(() => {
-    const unsubscribe = setupCallsListener();
-    return () => {
-      unsubscribe();
-    };
-  }, []);
 
   const toggleExpand = (callId) => {
     setExpandedCall(expandedCall === callId ? null : callId);

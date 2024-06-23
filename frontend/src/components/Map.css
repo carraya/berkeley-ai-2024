@@ -18,14 +18,35 @@
   }
   
   .marker {
-    background-color: #4CAF50;
-    border: 1px solid blue;
-    color: white;
-    padding: 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    margin: 4px 2px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
+    background-color: #22c55e1a;
+    padding: 4px;
+  }
+  
+  .marker::before {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: #22c55e;
+    border-radius: 50%;
+    animation: blinkMarker 1s infinite;
+  }
+  
+  @keyframes blinkMarker {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
+    100% {
+      opacity: 1;
+    }
   }

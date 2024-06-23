@@ -2,6 +2,7 @@ import mapboxgl from 'mapbox-gl';
 import React, { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import geoJson from '../pages/chicago-parks.json';
+import { useSelector } from 'react-redux';
 import './Map.css';
 
 mapboxgl.accessToken =
@@ -21,6 +22,7 @@ const Marker = ({ onClick, children, feature }) => {
 
 const Map = () => {
   const mapContainerRef = useRef(null);
+  const calls = useSelector(state => state.calls);
 
   // Initialize map when component mounts
   useEffect(() => {

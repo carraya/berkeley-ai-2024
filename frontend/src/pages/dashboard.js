@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { ago } from '../backend/util';
-import { setupCallsListener } from '../backend/subscriptions';
+import React, { useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import Map from '../components/Map';
+import { setupCallsListener } from '../backend/subscriptions';
 // import { Button } from '@/components/ui/button';
 
 const Dashboard = () => {
+
+    useEffect(() => {
+        const unsubscribe = setupCallsListener();
+        return () => {
+          unsubscribe();
+        };
+      }, []);
+
   return (
     <div className="flex">
       <Sidebar />
