@@ -260,7 +260,6 @@ async def handle_dispatch(call_info: WebhookPayload):
     # print(response)
     return response.dict()
 
-handler = Mangum(app=app)
 
 import requests
 SERP_API_KEY = "efb7ab91a902926c12b290ef01a5c2b66f8cc08e5270d0f60079866313bec533"
@@ -347,3 +346,7 @@ def get_address(address: FunctionCallingPayload):
                     ]
                 )
                 return response.dict()
+                return {"message": "Call not found"}
+            
+handler = Mangum(app=app, lifespan="off")
+            

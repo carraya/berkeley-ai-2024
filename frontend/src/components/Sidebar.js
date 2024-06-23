@@ -122,7 +122,7 @@ const StyledVerticalBorder = styled.div`
     width: 100%;
   }
 
-  & .link {
+  & .linkbruh {
     align-items: center;
     align-self: stretch;
     background-color: #ffffff0d;
@@ -130,12 +130,14 @@ const StyledVerticalBorder = styled.div`
     display: flex;
     flex: 0 0 auto;
     padding: 8px;
+    padding-left: 12px;
     position: relative;
     width: 100%;
     transition: background-color 0.3s ease; // Add smooth hover animation
+    cursor: pointer;
 }
 
-& .link:hover {
+& .linkbruh:hover {
     background-color: #ffffff1a; // Make the background slightly brighter on hover
 }
 
@@ -163,7 +165,7 @@ const StyledVerticalBorder = styled.div`
   }
 
   & .text-wrapper-3 {
-    color: #a1a1aa;
+    color: #ffffff;
     font-family: "SF Pro Text-Regular", Helvetica;
     font-size: 14px;
     font-weight: 400;
@@ -222,7 +224,7 @@ const StyledVerticalBorder = styled.div`
     height: 6px;
     position: relative;
     width: 6px;
-    animation: blinkBackground 1s infinite; // Add blinking animati
+    animation: blinkBackground 1s infinite; // Add blinking animation
   }
 
   @keyframes blinkBackground {
@@ -260,16 +262,15 @@ const StyledVerticalBorder = styled.div`
   }
 
   & .text-wrapper-5 {
-    color: var(--dashboardmintlifycomnero-40);
+    color: #A1A1A1;
     font-family: "SF Pro Text-Regular", Helvetica;
-    font-size: 14px;
-    font-weight: 400;
+    font-size: 11px;
+    font-weight: 600;
     letter-spacing: 0;
     line-height: 24px;
     position: relative;
     text-align: center;
     white-space: nowrap;
-    width: fit-content;
   }
 `;
 
@@ -291,101 +292,92 @@ const HoverModal = styled.div`
   word-wrap: break-word;
 `;
 
-export const Sidebar = () => {
-  const calls = useSelector(state => state.calls);
-  const [expandedCall, setExpandedCall] = useState(null);
-  const [hoverInfo, setHoverInfo] = useState(null);
-
-  const toggleExpand = (callId) => {
-    setExpandedCall(expandedCall === callId ? null : callId);
-  };
-
-  const handleMouseEnter = (e, call) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHoverInfo({
-      call: call,
-      x: rect.left + window.scrollX + rect.width / 2,
-      y: rect.top + window.scrollY - 40, // Position above the call chip
-    });
-  };
-
-  const handleMouseLeave = () => {
-    setHoverInfo(null);
-  };
-
-  const sortedCalls = [...calls].sort((a, b) => b.createdDate - a.createdDate);
-
-  return (
-    <StyledVerticalBorder>
-      <div className="container">
-        <div className="frame-wrapper">
-          <div className="div">
+export const Sidebar = ({ handleMouseEnter, handleMouseLeave, handleCallClick }) => {
+    const calls = useSelector(state => state.calls);
+    const [expandedCall, setExpandedCall] = useState(null);
+  
+    const toggleExpand = (callId) => {
+      setExpandedCall(expandedCall === callId ? null : callId);
+    };
+  
+    const sortedCalls = [...calls].sort((a, b) => b.createdDate - a.createdDate);
+  
+    return (
+      <StyledVerticalBorder>
+        <div className="container">
+          <div className="frame-wrapper">
             <div className="div">
-              <p className="text-wrapper">Call +1 (571) 651 8232</p>
-            </div>
-            <div className="heading">
-              <p className="p">To experience the future of 911 calls.</p>
+              <div className="div">
+                <p className="text-wrapper">Call +1 (571) 651 8232</p>
+              </div>
+              <div className="heading">
+                <p className="p">To experience the future of 911 calls.</p>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="frame">
-          <div className="text-wrapper-2">Recent Emergency Calls</div>
-        </div>
-        <div className="nav">
+          <div className="frame">
+            <div className="text-wrapper-2">Recent Emergency Calls</div>
+          </div>
+          <div className="nav">
           {sortedCalls.map((call) => {
             const IconToBeUsed = allIcons[call.icon] || allIcons['Activity'];
 
             return (
               <div 
-                className="link" 
+                className="linkbruh" 
                 key={call.id} 
-                onClick={() => toggleExpand(call.id)}
+                onClick={() => {
+                  toggleExpand(call.id);
+                  handleCallClick(call);
+                }}
                 onMouseEnter={(e) => handleMouseEnter(e, call)}
                 onMouseLeave={handleMouseLeave}
               >
-                <div className="frame-2">
-                  <div className="frame-3">
-                    <IconToBeUsed size={26} color="#ffffff" />
-                    <div className="div">
-                      <div className="text-wrapper-3">
-                        {call.shortSummary ? call.shortSummary : ""}
+                  <div className="frame-2">
+                    <div className="frame-3">
+                      <IconToBeUsed size={26} color="#ffffff" fill="#000000" />
+                      <div className="div">
+                        <div className="text-wrapper-3">
+                          {call.shortSummary ? call.shortSummary : ""}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {call.callStatus === "active" && (
-                    <div className="group">
-                      <div className="container-wrapper">
-                        <div className="overlay-wrapper">
-                          <div className="overlay">
-                            <div className="background-wrapper">
-                              <div className="background" />
-                            </div>
-                            <div className="margin">
-                              <div className="text-wrapper-4">Live</div>
+                    {call.callStatus === "active" && (
+                      <div className="group">
+                        <div className="container-wrapper">
+                          <div className="overlay-wrapper">
+                            <div className="overlay">
+                              <div className="background-wrapper">
+                                <div className="background" />
+                              </div>
+                              <div className="margin">
+                                <div className="text-wrapper-4">Live</div>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="text-wrapper-5">Built by Yo Mama</div>
+              );
+            })}
+          </div>
+          <div style={{ gap: "-2px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div className="text-wrapper-5">
+        {"Built by "}
+        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Christopher Arraya</a>
+        {"  "}
+        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Taha Ansari</a>
+        {""}
       </div>
-      {hoverInfo && (
-        <HoverModal
-          style={{
-            left: `${hoverInfo.x}px`,
-            top: `${hoverInfo.y}px`,
-            transform: 'translate(-50%, -100%)',
-          }}
-        >
-          {JSON.stringify(hoverInfo.call, null, 2)}
-        </HoverModal>
-      )}
-    </StyledVerticalBorder>
-  );
-};
+      <div className="text-wrapper-5">
+        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Jack Blair</a>
+        {"  "}
+        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Richard Zhang</a>
+      </div>
+    </div>
+        </div>
+      </StyledVerticalBorder>
+    );
+  };

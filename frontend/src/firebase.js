@@ -23,10 +23,9 @@ const firebaseConfig = {
   projectId: "berkeley2024-d8b6a",
   storageBucket: "berkeley2024-d8b6a.appspot.com",
   messagingSenderId: "990268880383",
-  appId: "1:990268880383:web:3fdc5c0c7da782c51fa3ca",
-  measurementId: "G-6Q7S9Y9SKW"
+  appId: "1:990268880383:web:cefef7cc5b2170851fa3ca",
+  measurementId: "G-4EXG4YK0QR"
 };
-
 
 // const firebaseConfig = {
 //     apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
