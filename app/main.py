@@ -193,7 +193,7 @@ def case_info(call_info: WebhookPayload):
     return {"message": "Request processed"}
 
 
-@app.post("/dispatch/")
+@app.post("/dispatch")
 async def handle_dispatch(call_info: WebhookPayload):
     tool_call_id = call_info.message.call.id
 
