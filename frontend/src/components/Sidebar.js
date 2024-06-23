@@ -335,7 +335,7 @@ export const Sidebar = ({ handleMouseEnter, handleMouseLeave, handleCallClick })
               >
                   <div className="frame-2">
                     <div className="frame-3">
-                      <IconToBeUsed size={26} color="#ffffff" fill="#000000" />
+                      <IconToBeUsed size={26} color="#ffffff" fill="#000000"  />
                       <div className="div">
                         <div className="text-wrapper-3">
                           {call.shortSummary ? call.shortSummary : ""}

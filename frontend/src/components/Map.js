@@ -56,7 +56,7 @@ const Map = () => {
         filter: ['==', ['get', 'type'], 'Fire Station'],
         paint: {
           'circle-radius': 10,
-          'circle-color': 'purple',
+          'circle-color': 'red',
           'circle-opacity': 0.6,
           'circle-stroke-width': 2,
           'circle-stroke-color': 'white'
