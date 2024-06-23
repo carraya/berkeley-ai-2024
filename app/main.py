@@ -16,7 +16,6 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-handler = Mangum(app=app)
 
 dotenv.load_dotenv(".env.example")
 
@@ -26,6 +25,7 @@ app = FastAPI()
 default_app = firebase_admin.initialize_app()
 db = firestore.client()
 
+handler = Mangum(app=app)
 
 print("Current App Name:", default_app.project_id)
 
