@@ -108,6 +108,13 @@ def case_info(call_info: WebhookPayload):
             return {"message": "Too many requests. Please try again later."}
         last_call_time[call_id] = current_time
 
+    doc_ref = db.collection('calls').document(call_id)
+
+    if call_info.message.type == "hang":
+        # Update callStatus to "ended" when "hang" event is received
+        doc_ref.update({'callStatus': 'ended'})
+        return {"message": "Call status updated to ended"}
+
     if call_info.message.type == "transcript":
         messages = call_info.message.artifact.messagesOpenAIFormatted
         conversation = ""
@@ -125,7 +132,6 @@ def case_info(call_info: WebhookPayload):
         )
         print(response)
         
-        doc_ref = db.collection('calls').document(call_info.message.call.id)
         res = response.choices[0].message.content
         res_json = json.loads(res)
         
@@ -139,6 +145,10 @@ def case_info(call_info: WebhookPayload):
         # Add createdDate if it doesn't exist
         if 'createdDate' not in current_data:
             current_data['createdDate'] = int(time.time())
+        
+        # Set callStatus to "active" if it doesn't exist
+        if 'callStatus' not in current_data:
+            current_data['callStatus'] = 'active'
         
         # Update the situation field
         current_data['situation'] = res_json
