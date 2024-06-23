@@ -22,7 +22,7 @@ dotenv.load_dotenv(".env.example")
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
-default_app = firebase_admin.initialize_app(credentials=os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+default_app = firebase_admin.initialize_app(credentials=json.loads(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON']))
 db = firestore.client()
 
 

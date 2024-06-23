@@ -113,7 +113,7 @@ jobs:
 
       - name: Update Lambda Environment Variables
         run: |
-          aws lambda update-function-configuration --function-name ai-berkeley-2024-BE --environment "Variables={OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}, GOOGLE_APPLICATION_CREDENTIALS='./service-account.json', GOOGLE_APPLICATION_CREDENTIALS_JSON=${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}}"
+          aws lambda update-function-configuration --function-name ai-berkeley-2024-BE --environment "Variables={OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}, GOOGLE_APPLICATION_CREDENTIALS='./service-account.json', GOOGLE_APPLICATION_CREDENTIALS_JSON='${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}''}"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
