@@ -291,101 +291,76 @@ const HoverModal = styled.div`
   word-wrap: break-word;
 `;
 
-export const Sidebar = () => {
-  const calls = useSelector(state => state.calls);
-  const [expandedCall, setExpandedCall] = useState(null);
-  const [hoverInfo, setHoverInfo] = useState(null);
-
-  const toggleExpand = (callId) => {
-    setExpandedCall(expandedCall === callId ? null : callId);
-  };
-
-  const handleMouseEnter = (e, call) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHoverInfo({
-      call: call,
-      x: rect.left + window.scrollX + rect.width / 2,
-      y: rect.top + window.scrollY - 40, // Position above the call chip
-    });
-  };
-
-  const handleMouseLeave = () => {
-    setHoverInfo(null);
-  };
-
-  const sortedCalls = [...calls].sort((a, b) => b.createdDate - a.createdDate);
-
-  return (
-    <StyledVerticalBorder>
-      <div className="container">
-        <div className="frame-wrapper">
-          <div className="div">
+export const Sidebar = ({ handleMouseEnter, handleMouseLeave }) => {
+    const calls = useSelector(state => state.calls);
+    const [expandedCall, setExpandedCall] = useState(null);
+  
+    const toggleExpand = (callId) => {
+      setExpandedCall(expandedCall === callId ? null : callId);
+    };
+  
+    const sortedCalls = [...calls].sort((a, b) => b.createdDate - a.createdDate);
+  
+    return (
+      <StyledVerticalBorder>
+        <div className="container">
+          <div className="frame-wrapper">
             <div className="div">
-              <p className="text-wrapper">Call +1 (571) 651 8232</p>
-            </div>
-            <div className="heading">
-              <p className="p">To experience the future of 911 calls.</p>
+              <div className="div">
+                <p className="text-wrapper">Call +1 (571) 651 8232</p>
+              </div>
+              <div className="heading">
+                <p className="p">To experience the future of 911 calls.</p>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="frame">
-          <div className="text-wrapper-2">Recent Emergency Calls</div>
-        </div>
-        <div className="nav">
-          {sortedCalls.map((call) => {
-            const IconToBeUsed = allIcons[call.icon] || allIcons['Activity'];
-
-            return (
-              <div 
-                className="link" 
-                key={call.id} 
-                onClick={() => toggleExpand(call.id)}
-                onMouseEnter={(e) => handleMouseEnter(e, call)}
-                onMouseLeave={handleMouseLeave}
-              >
-                <div className="frame-2">
-                  <div className="frame-3">
-                    <IconToBeUsed size={26} color="#ffffff" />
-                    <div className="div">
-                      <div className="text-wrapper-3">
-                        {call.shortSummary ? call.shortSummary : ""}
+          <div className="frame">
+            <div className="text-wrapper-2">Recent Emergency Calls</div>
+          </div>
+          <div className="nav">
+            {sortedCalls.map((call) => {
+              const IconToBeUsed = allIcons[call.icon] || allIcons['Activity'];
+  
+              return (
+                <div 
+                  className="link" 
+                  key={call.id} 
+                  onClick={() => toggleExpand(call.id)}
+                  onMouseEnter={(e) => handleMouseEnter(e, call)}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <div className="frame-2">
+                    <div className="frame-3">
+                      <IconToBeUsed size={26} color="#ffffff" />
+                      <div className="div">
+                        <div className="text-wrapper-3">
+                          {call.shortSummary ? call.shortSummary : ""}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {call.callStatus === "active" && (
-                    <div className="group">
-                      <div className="container-wrapper">
-                        <div className="overlay-wrapper">
-                          <div className="overlay">
-                            <div className="background-wrapper">
-                              <div className="background" />
-                            </div>
-                            <div className="margin">
-                              <div className="text-wrapper-4">Live</div>
+                    {call.callStatus === "active" && (
+                      <div className="group">
+                        <div className="container-wrapper">
+                          <div className="overlay-wrapper">
+                            <div className="overlay">
+                              <div className="background-wrapper">
+                                <div className="background" />
+                              </div>
+                              <div className="margin">
+                                <div className="text-wrapper-4">Live</div>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <div className="text-wrapper-5">Built by Yo Mama</div>
         </div>
-        <div className="text-wrapper-5">Built by Yo Mama</div>
-      </div>
-      {hoverInfo && (
-        <HoverModal
-          style={{
-            left: `${hoverInfo.x}px`,
-            top: `${hoverInfo.y}px`,
-            transform: 'translate(-50%, -100%)',
-          }}
-        >
-          {JSON.stringify(hoverInfo.call, null, 2)}
-        </HoverModal>
-      )}
-    </StyledVerticalBorder>
-  );
-};
+      </StyledVerticalBorder>
+    );
+  };

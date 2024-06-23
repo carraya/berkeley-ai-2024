@@ -84,7 +84,7 @@ const Map = () => {
         'tileSize': 512,
         'maxzoom': 14
       });
-      map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
+      map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 2 });
 
       map.addLayer({
         'id': 'sky',
@@ -95,6 +95,65 @@ const Map = () => {
           'sky-atmosphere-sun-intensity': 15
         }
       });
+
+       // Add 3D buildings
+       const layers = map.getStyle().layers;
+       const labelLayerId = layers.find(
+         (layer) => layer.type === 'symbol' && layer.layout['text-field']
+       ).id;
+       
+       map.addLayer(
+         {
+           'id': '3d-buildings',
+           'source': 'composite',
+           'source-layer': 'building',
+           'filter': ['==', 'extrude', 'true'],
+           'type': 'fill-extrusion',
+           'paint': {
+             'fill-extrusion-color': '#313131',
+             'fill-extrusion-height': [
+               'interpolate',
+               ['linear'],
+               ['zoom'],
+               0,
+               0,
+               8,
+               ['*', ['get', 'height'], 0.1],
+               12,
+               ['*', ['get', 'height'], 0.5],
+               16,
+               ['get', 'height']
+             ],
+             'fill-extrusion-base': [
+               'interpolate',
+               ['linear'],
+               ['zoom'],
+               0,
+               0,
+               8,
+               ['*', ['get', 'min_height'], 0.1],
+               12,
+               ['*', ['get', 'min_height'], 0.5],
+               16,
+               ['get', 'min_height']
+             ],
+             'fill-extrusion-opacity': [
+               'interpolate',
+               ['linear'],
+               ['zoom'],
+               0,
+               0,
+               8,
+               0.3,
+               12,
+               0.7,
+               16,
+               0.9
+             ]
+           }
+         },
+         labelLayerId
+       );
     });
 
     // map.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -252,7 +311,7 @@ const Map = () => {
       const marker = markers[currentIndex];
       mapRef.current.easeTo({
         center: marker.lngLat,
-        zoom: 15,
+        zoom: 16,
         duration: 3000,
         pitch: 60,
         bearing: (currentIndex * 45) % 360
