@@ -122,7 +122,7 @@ def save_to_firebase(string):
     doc_ref.set({"string": string})
     return JSONResponse(status_code=200, content={"message": "Situation added successfully"})
 
-@app.post("/info/")
+@app.post("/info")
 def case_info(call_info: WebhookPayload):
     # global last_call_time
     # call_id = call_info.message.call.id
