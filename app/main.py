@@ -346,7 +346,6 @@ def get_address(address: FunctionCallingPayload):
                     ]
                 )
                 return response.dict()
-                return {"message": "Call not found"}
             
 handler = Mangum(app=app, lifespan="off")
             
