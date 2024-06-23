@@ -117,7 +117,7 @@ def case_info(call_info: WebhookPayload):
     global last_call_time
     call_id = call_info.message.call.id
     logger.error("WE'RE IN")
-    logger.trace("WE'RE IN"
+    logger.trace("WE'RE IN")
                          
     with lock:
         current_time = time.time()
