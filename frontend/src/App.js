@@ -1,4 +1,3 @@
-
 import ReactGA from "react-ga";
 import { Provider } from "react-redux";
 import React from "react";
@@ -12,20 +11,20 @@ ReactGA.initialize(GA_TRACKER_ID, { debug: GA_DEBUG_MODE });
 function App() {
   ReactGA.pageview(window.location.href);
 
-  //lets only debug if we are in localhost
+  // Debug mode setup
   var DEBUG = window.location.href.indexOf("localhost") > -1;
   if(!DEBUG){
-      if(!window.console) window.console = {};
-      var methods = ["log", "debug", "warn", "info"];
-      for(var i=0;i<methods.length;i++){
-          console[methods[i]] = function(){};
-      }
+    if(!window.console) window.console = {};
+    var methods = ["log", "debug", "warn", "info"];
+    for(var i=0;i<methods.length;i++){
+      console[methods[i]] = function(){};
+    }
   }
 
   return (
-      <Provider store={store}>
-        <Dashboard />
-      </Provider>
+    <Provider store={store}>
+          <Dashboard />
+    </Provider>
   );
 }
 

@@ -1,9 +1,6 @@
-from typing import List, Optional, Dict, Any
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from models import Suspect, CallInfo
-from pydantic import BaseModel
-from datetime import datetime
+import threading
+from fastapi import FastAPI, HTTPException
+from models import WebhookPayload, ToolCallResponse, ToolCallResult
 import firebase_admin
 import dotenv
 from firebase_admin import firestore
@@ -13,7 +10,7 @@ import json
 from mangum import Mangum
 import logging
 from firebase_admin import credentials
-from aws_lambda_powertools import Logger
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -48,116 +45,176 @@ def read_root():
     return {"Hello": "World"}
 
 
-class FunctionCall(BaseModel):
-    name: str
-    parameters: Dict[str, Optional[str]] = {}
+# Dictionary to store locks for each call_id
+call_locks = {}
+lock_dict_lock = threading.Lock()
 
 
-class ToolCall(BaseModel):
-    id: str
-    type: str
-    function: FunctionCall
+ICON_LIST = ["FireHydrant", "Firetruck", "Flame", "Car", "Plane",
+             "User", "Users", "Old", "ClipboardHeart", "Vaccine"]
 
 
-class Call(BaseModel):
-    id: str
-    orgId: str
-    createdAt: datetime
-    updatedAt: datetime
-    type: str
-    status: str
-    assistantId: str
-    webCallUrl: Optional[str] = None
+def get_summary_and_icon(conversation: str, dispatch_info: str):
+    # Get short summary
+    summary_prompt = f"""
+    Summarize the following emergency situation in 3-4 words.
+    Respond ONLY with the summary, nothing else.
 
+    Emergency details:
+    Dispatch Information: {dispatch_info}
+    Conversation Transcript: {conversation}
 
-class Message(BaseModel):
-    role: Optional[str] = None
-    message: Optional[str] = None
-    time: float
-    endTime: Optional[float] = None
-    secondsFromStart: float
-    source: Optional[str] = ""
-    duration: Optional[float] = None
-    toolCalls: Optional[List[ToolCall]] = None
+    3-4 word summary:
+    """
 
+    summary_response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": summary_prompt}],
+        max_tokens=20,  # Limiting to ensure a short response
+        temperature=0.3  # Lower temperature for more focused output
+    )
+    short_summary = summary_response.choices[0].message.content.strip()
 
-class OpenAIFormattedMessage(BaseModel):
-    role: str
-    content: Optional[str] = None
-    tool_calls: Optional[List[ToolCall]] = None
+    # Get icon
+    icon_prompt = f"""
+    Select the most appropriate icon for this emergency situation from the list below.
+    Respond ONLY with the icon name, nothing else. Make sure it keeps exact case and spelling.
 
+    Emergency details:
+    Dispatch Information: {dispatch_info}
+    Conversation Transcript: {conversation}
 
-class Artifact(BaseModel):
-    messages: List[Message]
-    messagesOpenAIFormatted: List[OpenAIFormattedMessage]
+    Icon options: {ICON_LIST}
 
+    Selected icon:
+    """
 
-class FunctionCallMessage(BaseModel):
-    type: str
-    role: Optional[str] = None
-    transcriptType: Optional[str] = None
-    transcript: Optional[str] = None
-    # functionCall: FunctionCall
-    call: Call
-    artifact: Artifact
-    timestamp: datetime
+    icon_response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": icon_prompt}],
+        max_tokens=20,  # Limiting to ensure a single icon
+        temperature=0.3  # Lower temperature for more focused output
+    )
+    selected_icon = icon_response.choices[0].message.content.strip()
 
+    return short_summary, selected_icon
 
-class WebhookPayload(BaseModel):
-    message: FunctionCallMessage
-
-
-
-import time
-from threading import Lock
-
-last_call_time = 0
-lock = Lock()
-
-
-@app.post("/save")
-def save_to_firebase(string):
-    doc_ref = db.collection('idk').document(string)
-    
-    doc_ref.set({"string": string})
-    return JSONResponse(status_code=200, content={"message": "Situation added successfully"})
 
 @app.post("/info")
 def case_info(call_info: WebhookPayload):
-    global last_call_time
     call_id = call_info.message.call.id
-    logger.info("WE'RE IN")
-                         
-    with lock:
-        current_time = time.time()
-        if isinstance(last_call_time, int):
-            last_call_time = {}
-        if call_id in last_call_time and current_time - last_call_time[call_id] < 1:
-            return {"message": "Too many requests. Please try again later."}
-        last_call_time[call_id] = current_time
 
-    if call_info.message.type == "transcript":
-        messages = call_info.message.artifact.messagesOpenAIFormatted
-        conversation = ""
-        for message in messages:
-            role = message.role
-            content = message.content
-            if content:
-                conversation += f"{role}: {content}\n"
-        logger.info(conversation)
-   
-        response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": f"Extract situation details/information from the following 911 operator transcript and provide it in JSON format. IF THE INFORMATION IS NOT GIVEN, DO NOT ATTEMPT TO FILL THAT ATTRIBUTE IN THE JSON. RETURN NONE IF NO VALUABLE INFORMATION CAN BE EXTRACTED. QUOTE THE USER FOR EACH PIECE OF INFORMATION YOU RECORD IN THE FOLLOWING STRUCUTRE: {{'location': {{'source': '<user quote>', 'info': '<extracted information>'}}}}:\n\n{conversation}"}],
-            response_format={ "type": "json_object" }
-        )
-        logger.info(response)
-       
+    with lock_dict_lock:
+        if call_id not in call_locks:
+            call_locks[call_id] = threading.Lock()
+
+    with call_locks[call_id]:
         doc_ref = db.collection('calls').document(call_id)
-        res = response.choices[0].message.content
-        res_json = json.loads(res)
-        
-        doc_ref.set({"situation": res_json})
-        return JSONResponse(status_code=200, content={"message": "Situation added successfully"})
-    
-handler = Mangum(app=app, lifespan="off")
+
+        if call_info.message.type == "end-of-call-report":
+            print(f"END OF CALL: {call_id}")
+            try:
+                doc_ref.update({'callStatus': 'ended'})
+            except:
+                doc_ref.set(
+                    {'callStatus': 'ended', 'createdDate': int(time.time())})
+            return {"message": "Call status updated to ended"}
+
+        if call_info.message.type == "conversation-update":
+            print(f"Conversation update received for call: {call_id}")
+            messages = call_info.message.artifact.messagesOpenAIFormatted
+            conversation = ""
+            for message in messages:
+                role = message.role
+                content = message.content
+                if content:
+                    conversation += f"{role}: {content}\n"
+
+            doc = doc_ref.get()
+            if doc.exists:
+                current_data = doc.to_dict()
+                existing_situation = current_data.get('situation', {})
+            else:
+                current_data = {}
+                existing_situation = {}
+
+            if 'createdDate' not in current_data:
+                current_data['createdDate'] = int(time.time())
+
+            if 'callStatus' not in current_data:
+                current_data['callStatus'] = 'active'
+
+            prompt = f"""
+            Given the existing situation details:
+            {json.dumps(existing_situation, indent=2)}
+
+            And the following 911 operator transcript:
+            {conversation}
+
+            Extract any new or updated situation details/information and provide it in JSON format.
+            If the information is not given or hasn't changed, do not include that attribute in the JSON.
+            Quote the user for each piece of new or updated information you record in the following structure:
+            {{'<attribute>': {{'source': '<user quote>', 'info': '<extracted information>'}}}}
+            """
+
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"}
+                )
+
+                res = response.choices[0].message.content
+                new_info = json.loads(res)
+
+                for key, value in new_info.items():
+                    if key not in existing_situation or existing_situation[key] != value:
+                        existing_situation[key] = value
+
+                current_data['situation'] = existing_situation
+
+                # Get summary and icon
+                dispatch_info = current_data.get(
+                    'dispatchInformation', 'No dispatch information available.')
+                short_summary, selected_icon = get_summary_and_icon(
+                    conversation, dispatch_info)
+
+                current_data['shortSummary'] = short_summary
+                current_data['icon'] = selected_icon
+
+                doc_ref.set(current_data)
+
+                return {"message": f"Situation updated successfully for call {call_id}"}
+            except Exception as e:
+                print(f"Error processing call {call_id}: {str(e)}")
+                raise HTTPException(
+                    status_code=500, detail=f"Error processing request: {str(e)}")
+
+    return {"message": "Request processed"}
+
+
+@app.post("/dispatch/")
+async def handle_dispatch(call_info: WebhookPayload):
+    tool_call_id = call_info.message.call.id
+
+    doc_ref = db.collection("calls").document(tool_call_id)
+    doc = doc_ref.get()
+
+    dispatch_information = None
+    if doc.exists:
+        call_data = doc.to_dict()
+        dispatch_information = call_data.get(
+            'dispatchInformation', "We need to gather more information to dispatch help.")
+
+    response = ToolCallResponse(
+        results=[
+            ToolCallResult(
+                toolCallId=tool_call_id,
+                result=dispatch_information
+            )
+        ]
+    )
+    # print(response)
+    return response.dict()
+
+handler = Mangum(app=app)

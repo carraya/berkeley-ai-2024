@@ -6,7 +6,7 @@ import { setCalls } from '../redux/actions';
 
 export const setupCallsListener = () => {
   const firestore = app.firestore();
-  const callsRef = firestore.collection('calls');
+  const callsRef = firestore.collection('calls').limit(10);
 
   return callsRef.onSnapshot((snapshot) => {
     const calls = snapshot.docs.map(doc => ({
