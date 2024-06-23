@@ -1,4 +1,4 @@
-# 10-1-1: AI-Powered Emergency Response System :robot_face:
+# 10-1-1: AI-Powered Emergency Response System 🤖
 
 ## Introduction
 
