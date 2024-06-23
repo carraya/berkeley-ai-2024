@@ -126,8 +126,7 @@ def save_to_firebase(string):
 def case_info(call_info: WebhookPayload):
     global last_call_time
     call_id = call_info.message.call.id
-    logger.error("WE'RE IN")
-    logger.trace("WE'RE IN")
+    logger.info("WE'RE IN")
                          
     with lock:
         current_time = time.time()
@@ -146,9 +145,6 @@ def case_info(call_info: WebhookPayload):
             if content:
                 conversation += f"{role}: {content}\n"
         logger.info(conversation)
-        
-        logger.trace(conversation)
-        logger.error(conversation)
    
         response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -156,8 +152,6 @@ def case_info(call_info: WebhookPayload):
             response_format={ "type": "json_object" }
         )
         logger.info(response)
-        logger.trace(response)
-        logger.error(response)
        
         doc_ref = db.collection('calls').document(call_id)
         res = response.choices[0].message.content
