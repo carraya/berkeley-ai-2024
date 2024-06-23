@@ -2,9 +2,12 @@ import mapboxgl from 'mapbox-gl';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { createRoot } from 'react-dom/client';
+import emergencyData from '../static/berkeleyEmergencyResponse.json';
+
 import './Map.css';
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiYmxhaXJvcmNoYXJkIiwiYSI6ImNsNWZzeGtrNDEybnMzaXA4eHRuOGU5NDUifQ.s59N5x1EqfyPZxeImzNwbw';
+console.log(emergencyData);
 
 const Marker = ({ onClick, children, call }) => {
   const _onClick = () => {
@@ -42,6 +45,41 @@ const Map = () => {
     mapRef.current = map;
 
     map.on('style.load', () => {
+      map.addSource('emergency-locations', {
+        type: 'geojson',
+        data: emergencyData
+      });
+
+      // Add a layer for fire stations
+      map.addLayer({
+        id: 'fire-stations',
+        type: 'circle',
+        source: 'emergency-locations',
+        filter: ['==', ['get', 'type'], 'Fire Station'],
+        paint: {
+          'circle-radius': 10,
+          'circle-color': 'purple',
+          'circle-opacity': 0.6,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': 'white'
+        }
+      });
+
+      // Add a layer for police stations
+      map.addLayer({
+        id: 'police-stations',
+        type: 'circle',
+        source: 'emergency-locations',
+        filter: ['==', ['get', 'type'], 'Police Station'],
+        paint: {
+          'circle-radius': 10,
+          'circle-color': 'blue',
+          'circle-opacity': 0.6,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': 'white'
+        }
+      });
+      
       map.addSource('mapbox-dem', {
         'type': 'raster-dem',
         'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
