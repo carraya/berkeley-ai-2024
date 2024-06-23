@@ -11,10 +11,9 @@ const HoverModal = styled.div`
   padding: 15px;
   border-radius: 5px;
   z-index: 1000;
-  pointer-events: none;
   transition: opacity 0.2s ease-in-out;
-  max-width: 500px; /* Increased max-width */
-  max-height: 600px; /* Increased max-height */
+  max-width: 500px;
+  max-height: 600px;
   overflow-y: auto;
   font-size: 12px;
   white-space: pre-wrap;
@@ -26,17 +25,36 @@ const HoverModal = styled.div`
 
 const Dashboard = () => {
   const [hoverInfo, setHoverInfo] = useState(null);
+  const [selectedCall, setSelectedCall] = useState(null);
 
   const handleMouseEnter = (e, call) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHoverInfo({
-      call: call,
-      x: rect.left + window.scrollX + rect.width / 2,
-      y: rect.top + window.scrollY - 40,
-    });
+    if (!selectedCall) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setHoverInfo({
+        call: call,
+        x: rect.left + window.scrollX + rect.width / 2,
+        y: rect.top + window.scrollY - 40,
+      });
+    }
   };
 
   const handleMouseLeave = () => {
+    if (!selectedCall) {
+      setHoverInfo(null);
+    }
+  };
+
+  const handleCallClick = (call) => {
+    setSelectedCall(call);
+    setHoverInfo({
+      call: call,
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
+  };
+
+  const handleModalClose = () => {
+    setSelectedCall(null);
     setHoverInfo(null);
   };
 
@@ -52,16 +70,18 @@ const Dashboard = () => {
       <Sidebar
         handleMouseEnter={handleMouseEnter}
         handleMouseLeave={handleMouseLeave}
+        handleCallClick={handleCallClick}
       />
       <Map />
-      {hoverInfo && (
-        <HoverModal>
+      {(hoverInfo || selectedCall) && (
+        <HoverModal onClick={selectedCall ? handleModalClose : undefined} style={{ cursor: selectedCall ? 'pointer' : 'default' }}>
           <div>
-            <p>Call Status: {hoverInfo.call.callStatus}</p>
-            <p>Created Date: {hoverInfo.call.createdDate}</p>
-            <p>Icon: {hoverInfo.call.icon}</p>
+            <p>Call Status: {(selectedCall || hoverInfo.call).callStatus}</p>
+            <p>Created Date: {(selectedCall || hoverInfo.call).createdDate}</p>
+            <p>Icon: {(selectedCall || hoverInfo.call).icon}</p>
             <p>Remaining JSON:</p>
-            <pre>{JSON.stringify(hoverInfo.call, null, 2)}</pre>
+            <pre>{JSON.stringify(selectedCall || hoverInfo.call, null, 2)}</pre>
+            {selectedCall && <p>Click anywhere on this modal to close</p>}
           </div>
         </HoverModal>
       )}

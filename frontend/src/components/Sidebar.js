@@ -122,7 +122,7 @@ const StyledVerticalBorder = styled.div`
     width: 100%;
   }
 
-  & .link {
+  & .linkbruh {
     align-items: center;
     align-self: stretch;
     background-color: #ffffff0d;
@@ -130,12 +130,14 @@ const StyledVerticalBorder = styled.div`
     display: flex;
     flex: 0 0 auto;
     padding: 8px;
+    padding-left: 12px;
     position: relative;
     width: 100%;
     transition: background-color 0.3s ease; // Add smooth hover animation
+    cursor: pointer;
 }
 
-& .link:hover {
+& .linkbruh:hover {
     background-color: #ffffff1a; // Make the background slightly brighter on hover
 }
 
@@ -163,7 +165,7 @@ const StyledVerticalBorder = styled.div`
   }
 
   & .text-wrapper-3 {
-    color: #a1a1aa;
+    color: #ffffff;
     font-family: "SF Pro Text-Regular", Helvetica;
     font-size: 14px;
     font-weight: 400;
@@ -260,16 +262,15 @@ const StyledVerticalBorder = styled.div`
   }
 
   & .text-wrapper-5 {
-    color: var(--dashboardmintlifycomnero-40);
+    color: #A1A1A1;
     font-family: "SF Pro Text-Regular", Helvetica;
-    font-size: 14px;
-    font-weight: 400;
+    font-size: 11px;
+    font-weight: 600;
     letter-spacing: 0;
     line-height: 24px;
     position: relative;
     text-align: center;
     white-space: nowrap;
-    width: fit-content;
   }
 `;
 
@@ -291,7 +292,7 @@ const HoverModal = styled.div`
   word-wrap: break-word;
 `;
 
-export const Sidebar = ({ handleMouseEnter, handleMouseLeave }) => {
+export const Sidebar = ({ handleMouseEnter, handleMouseLeave, handleCallClick }) => {
     const calls = useSelector(state => state.calls);
     const [expandedCall, setExpandedCall] = useState(null);
   
@@ -318,20 +319,23 @@ export const Sidebar = ({ handleMouseEnter, handleMouseLeave }) => {
             <div className="text-wrapper-2">Recent Emergency Calls</div>
           </div>
           <div className="nav">
-            {sortedCalls.map((call) => {
-              const IconToBeUsed = allIcons[call.icon] || allIcons['Activity'];
-  
-              return (
-                <div 
-                  className="link" 
-                  key={call.id} 
-                  onClick={() => toggleExpand(call.id)}
-                  onMouseEnter={(e) => handleMouseEnter(e, call)}
-                  onMouseLeave={handleMouseLeave}
-                >
+          {sortedCalls.map((call) => {
+            const IconToBeUsed = allIcons[call.icon] || allIcons['Activity'];
+
+            return (
+              <div 
+                className="linkbruh" 
+                key={call.id} 
+                onClick={() => {
+                  toggleExpand(call.id);
+                  handleCallClick(call);
+                }}
+                onMouseEnter={(e) => handleMouseEnter(e, call)}
+                onMouseLeave={handleMouseLeave}
+              >
                   <div className="frame-2">
                     <div className="frame-3">
-                      <IconToBeUsed size={26} color="#ffffff" />
+                      <IconToBeUsed size={26} color="#ffffff" fill="#000000" />
                       <div className="div">
                         <div className="text-wrapper-3">
                           {call.shortSummary ? call.shortSummary : ""}
@@ -359,7 +363,20 @@ export const Sidebar = ({ handleMouseEnter, handleMouseLeave }) => {
               );
             })}
           </div>
-          <div className="text-wrapper-5">Built by Yo Mama</div>
+          <div style={{ gap: "-2px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div className="text-wrapper-5">
+        {"Built by "}
+        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Christopher Arraya</a>
+        {"  "}
+        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Taha Ansari</a>
+        {""}
+      </div>
+      <div className="text-wrapper-5">
+        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Jack Blair</a>
+        {"  "}
+        <a href="https://www.google.com" style={{ textDecoration: "underline" }}>Richard Zhang</a>
+      </div>
+    </div>
         </div>
       </StyledVerticalBorder>
     );
