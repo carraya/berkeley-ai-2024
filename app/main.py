@@ -17,7 +17,7 @@ from aws_lambda_powertools import Logger
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = Logger()
+logger = logging.getLogger()
 
 dotenv.load_dotenv(".env.example")
 
@@ -124,18 +124,18 @@ def save_to_firebase(string):
 
 @app.post("/info")
 def case_info(call_info: WebhookPayload):
-    # global last_call_time
-    # call_id = call_info.message.call.id
+    global last_call_time
+    call_id = call_info.message.call.id
     logger.error("WE'RE IN")
     logger.trace("WE'RE IN")
                          
-    # with lock:
-    #     current_time = time.time()
-    #     if isinstance(last_call_time, int):
-    #         last_call_time = {}
-    #     if call_id in last_call_time and current_time - last_call_time[call_id] < 1:
-    #         return {"message": "Too many requests. Please try again later."}
-    #     last_call_time[call_id] = current_time
+    with lock:
+        current_time = time.time()
+        if isinstance(last_call_time, int):
+            last_call_time = {}
+        if call_id in last_call_time and current_time - last_call_time[call_id] < 1:
+            return {"message": "Too many requests. Please try again later."}
+        last_call_time[call_id] = current_time
 
     if call_info.message.type == "transcript":
         messages = call_info.message.artifact.messagesOpenAIFormatted
@@ -159,7 +159,7 @@ def case_info(call_info: WebhookPayload):
         logger.trace(response)
         logger.error(response)
        
-        doc_ref = db.collection('calls').document(call_info.message.call.id)
+        doc_ref = db.collection('calls').document(call_id)
         res = response.choices[0].message.content
         res_json = json.loads(res)
         
