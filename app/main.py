@@ -19,7 +19,7 @@ logger = logging.getLogger()
 dotenv.load_dotenv(".env.example")
 
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
+logger.info(f"--------------------------------------------------ALL ENV {os.environ}--------------------------------------------------")
 app = FastAPI()
 default_app = firebase_admin.initialize_app(credential=credentials.Certificate({
     "type": "service_account",
