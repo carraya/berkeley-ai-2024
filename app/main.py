@@ -13,11 +13,11 @@ import json
 from mangum import Mangum
 import logging
 from firebase_admin import credentials
-
+from aws_lambda_powertools import Logger
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = Logger()
 
 dotenv.load_dotenv(".env.example")
 
