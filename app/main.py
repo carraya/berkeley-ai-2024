@@ -105,6 +105,10 @@ lock = Lock()
 def case_info(call_info: WebhookPayload):
     global last_call_time
     call_id = call_info.message.call.id
+    handler.logger.error("WE'RE IN")
+    handler.logger.trace("WE'RE IN")
+
+
     with lock:
         current_time = time.time()
         if isinstance(last_call_time, int):
@@ -122,7 +126,8 @@ def case_info(call_info: WebhookPayload):
             if content:
                 conversation += f"{role}: {content}\n"
         handler.logger.info(conversation)
-    
+        handler.logger.trace(conversation)
+        handler.logger.error(conversation)
     
         response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -130,6 +135,8 @@ def case_info(call_info: WebhookPayload):
             response_format={ "type": "json_object" }
         )
         handler.logger.info(response)
+        handler.logger.trace(response)
+        handler.logger.error(response)
         
         doc_ref = db.collection('calls').document(call_info.message.call.id)
         res = response.choices[0].message.content
