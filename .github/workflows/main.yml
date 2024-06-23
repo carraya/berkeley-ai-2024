@@ -40,7 +40,7 @@ jobs:
 
       # Build the app
       - name: Build
-        run: . venv/bin/activate
+        run: . venv/bin/activate     
 
       - name: Create Zipfile archive of Dependencies
         run: |
@@ -48,7 +48,7 @@ jobs:
           zip -r9 ../../../../api.zip .
 
       - name: Add App to Zipfile
-        run: zip -g ./api.zip -r .
+        run: cd ./app && zip -g ../api.zip -r .
 
       - name: Upload zip file artifact
         uses: actions/upload-artifact@v2
@@ -59,7 +59,6 @@ jobs:
   continuous-deployment:
     runs-on: ubuntu-latest
     needs: [continuous-integration]
-    if: github.ref == 'refs/heads/main'
     steps:
       - name: Install AWS CLI
         uses: unfor19/install-aws-cli-action@v1
@@ -84,6 +83,37 @@ jobs:
 
       - name: Deploy new Lambda
         run: aws lambda update-function-code --function-name ai-berkeley-2024-BE --s3-bucket ai-berkeley-2024 --s3-key api.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      
+      - name: Wait for Lambda update to complete
+        id: wait-for-update
+        run: |
+          function_name="ai-berkeley-2024-BE"
+          while true; do
+            status=$(aws lambda get-function-configuration --function-name $function_name --query 'LastUpdateStatus' --output text)
+            if [ "$status" = "Successful" ]; then
+              echo "Lambda update completed"
+              break
+            elif [ "$status" = "InProgress" ]; then
+              echo "Lambda update in progress, waiting..."
+              sleep 10
+            else
+              echo "Unexpected status: $status"
+              exit 1
+            fi
+          done
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+
+
+      - name: Update Lambda Environment Variables
+        run: |
+          aws lambda update-function-configuration --function-name ai-berkeley-2024-BE --environment "Variables={OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}, GOOGLE_APPLICATION_CREDENTIALS='./service-account.json', PRIVATE_KEY_ID=${{ secrets.PRIVATE_KEY_ID }}, PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}, CLIENT_EMAIL=${{ secrets.CLIENT_EMAIL }}, CLIENT_ID=${{ secrets.CLIENT_ID }}, CLIENT_CERT_URL=${{ secrets.CLIENT_CERT_URL }}}"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

@@ -1,5 +1,5 @@
 import threading
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from models import WebhookPayload, ToolCallResponse, ToolCallResult, FunctionCallingPayload
 import firebase_admin
 import dotenv
@@ -8,15 +8,32 @@ import openai
 import os
 import json
 from mangum import Mangum
+import logging
+from firebase_admin import credentials
 import time
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
 
-dotenv.load_dotenv()
+dotenv.load_dotenv(".env.example")
 
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
+logger.info(f"--------------------------------------------------ALL ENV {os.environ}--------------------------------------------------")
 app = FastAPI()
-default_app = firebase_admin.initialize_app()
+default_app = firebase_admin.initialize_app(credential=credentials.Certificate({
+    "type": "service_account",
+    "project_id": "berkeley2024-d8b6a",
+    "private_key_id": os.getenv("PRIVATE_KEY_ID"),
+    "private_key": os.getenv("PRIVATE_KEY").replace("*n*", "\n"),
+    "client_email": os.getenv("CLIENT_EMAIL"),
+    "client_id": os.getenv("CLIENT_ID"),
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": os.getenv("CLIENT_CERT_URL"),
+    "universe_domain": "googleapis.com"
+}))
 db = firestore.client()
 
 
@@ -83,7 +100,7 @@ def get_summary_and_icon(conversation: str, dispatch_info: str):
     return short_summary, selected_icon
 
 
-@app.post("/info/")
+@app.post("/info")
 def case_info(call_info: WebhookPayload):
     call_id = call_info.message.call.id
 
@@ -219,7 +236,7 @@ def case_info(call_info: WebhookPayload):
     return {"message": "Request processed"}
 
 
-@app.post("/dispatch/")
+@app.post("/dispatch")
 async def handle_dispatch(call_info: WebhookPayload):
     tool_call_id = call_info.message.call.id
 
@@ -243,7 +260,6 @@ async def handle_dispatch(call_info: WebhookPayload):
     # print(response)
     return response.dict()
 
-handler = Mangum(app=app)
 
 import requests
 SERP_API_KEY = "efb7ab91a902926c12b290ef01a5c2b66f8cc08e5270d0f60079866313bec533"
@@ -285,7 +301,7 @@ def get_address_serp(location: str):
 
 # data["local_results"][0]["address"]
 
-@app.post("/address/")
+@app.post("/address")
 def get_address(address: FunctionCallingPayload):
     call_id = address.message.call.id
     with lock_dict_lock:
@@ -312,3 +328,6 @@ def get_address(address: FunctionCallingPayload):
                 return {"message": "Location updated successfully"}
             else:
                 return {"message": "Call not found"}
+            
+handler = Mangum(app=app, lifespan="off")
+            
