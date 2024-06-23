@@ -10,6 +10,8 @@ import openai
 import os
 import json
 from mangum import Mangum
+import time
+
 
 dotenv.load_dotenv()
 
@@ -116,7 +118,6 @@ def case_info(call_info: WebhookPayload):
                 conversation += f"{role}: {content}\n"
         print(conversation)
     
-    
         response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": f"Extract situation details/information from the following 911 operator transcript and provide it in JSON format. IF THE INFORMATION IS NOT GIVEN, DO NOT ATTEMPT TO FILL THAT ATTRIBUTE IN THE JSON. RETURN NONE IF NO VALUABLE INFORMATION CAN BE EXTRACTED. QUOTE THE USER FOR EACH PIECE OF INFORMATION YOU RECORD IN THE FOLLOWING STRUCUTRE: {{'location': {{'source': '<user quote>', 'info': '<extracted information>'}}}}:\n\n{conversation}"}],
@@ -127,7 +128,24 @@ def case_info(call_info: WebhookPayload):
         doc_ref = db.collection('calls').document(call_info.message.call.id)
         res = response.choices[0].message.content
         res_json = json.loads(res)
-        doc_ref.set({"situation": res_json})
+        
+        # Get the current document data
+        doc = doc_ref.get()
+        if doc.exists:
+            current_data = doc.to_dict()
+        else:
+            current_data = {}
+        
+        # Add createdDate if it doesn't exist
+        if 'createdDate' not in current_data:
+            current_data['createdDate'] = int(time.time())
+        
+        # Update the situation field
+        current_data['situation'] = res_json
+        
+        # Set the updated data back to Firestore
+        doc_ref.set(current_data)
+        
         return {"message": "Situation added successfully"}
 
 handler = Mangum(app=app)
