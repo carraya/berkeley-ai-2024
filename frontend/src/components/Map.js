@@ -26,13 +26,14 @@ const Map = () => {
   useEffect(() => {
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: 'mapbox://styles/blairorchard/clxqttgt300ks01o7cw004i5f', // Changed to satellite streets style
+      style: 'mapbox://styles/mapbox/dark-v11', // Changed to satellite streets style
       //center on berkeley
       center: [-122.272747, 37.871853],
       zoom: 12, // Increased zoom level for better 3D view
       pitch: 60, // Added pitch for 3D effect
       bearing: -60, // Added bearing for 3D effect
-      antialias: true // Smooth out edges for better rendering
+      antialias: true, // Smooth out edges for better rendering
+      attributionControl: false  
     });
 
     map.on('style.load', () => {

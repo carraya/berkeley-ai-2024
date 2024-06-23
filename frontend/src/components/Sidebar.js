@@ -9,9 +9,9 @@ import * as allIcons from "tabler-icons-react";
 const StyledVerticalBorder = styled.div`
   align-items: flex-start;
   background-color: #000000;
-  border-color: var(--dashboardmintlifycomnero-5);
+  border-color: #1C1C1E;
   border-right-style: solid;
-  border-right-width: 0.56px;
+  border-right-width: 1px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -265,11 +265,17 @@ const HoverModal = styled.div`
   position: fixed;
   background-color: black;
   color: white;
-  padding: 10px 20px;
+  padding: 15px;
   border-radius: 5px;
   z-index: 1000;
   pointer-events: none;
   transition: opacity 0.2s ease-in-out;
+  max-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 `;
 
 export const Sidebar = () => {
@@ -291,7 +297,7 @@ export const Sidebar = () => {
   const handleMouseEnter = (e, call) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setHoverInfo({
-      id: call.id,
+      call: call,
       x: rect.left + window.scrollX + rect.width / 2,
       y: rect.top + window.scrollY - 40, // Position above the call chip
     });
@@ -371,7 +377,7 @@ export const Sidebar = () => {
             transform: 'translate(-50%, -100%)',
           }}
         >
-          Call ID: {hoverInfo.id}
+          {JSON.stringify(hoverInfo.call, null, 2)}
         </HoverModal>
       )}
     </StyledVerticalBorder>
