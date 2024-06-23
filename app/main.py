@@ -22,7 +22,7 @@ dotenv.load_dotenv(".env.example")
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
-default_app = firebase_admin.initialize_app()
+default_app = firebase_admin.initialize_app(credentials=os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
 db = firestore.client()
 
 
@@ -104,10 +104,9 @@ lock = Lock()
 def case_info(call_info: WebhookPayload):
     global last_call_time
     call_id = call_info.message.call.id
-    handler.logger.error("WE'RE IN")
-    handler.logger.trace("WE'RE IN")
-
-
+    logger.error("WE'RE IN")
+    logger.trace("WE'RE IN"
+                         
     with lock:
         current_time = time.time()
         if isinstance(last_call_time, int):
