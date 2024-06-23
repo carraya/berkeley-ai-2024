@@ -1,16 +1,14 @@
 import mapboxgl from 'mapbox-gl';
-import React, { useEffect, useRef } from 'react';
-import { createRoot } from 'react-dom/client';
-import geoJson from '../pages/chicago-parks.json';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { createRoot } from 'react-dom/client';
 import './Map.css';
 
-mapboxgl.accessToken =
-  'pk.eyJ1IjoiYmxhaXJvcmNoYXJkIiwiYSI6ImNsNWZzeGtrNDEybnMzaXA4eHRuOGU5NDUifQ.s59N5x1EqfyPZxeImzNwbw';
+mapboxgl.accessToken = 'pk.eyJ1IjoiYmxhaXJvcmNoYXJkIiwiYSI6ImNsNWZzeGtrNDEybnMzaXA4eHRuOGU5NDUifQ.s59N5x1EqfyPZxeImzNwbw';
 
-const Marker = ({ onClick, children, feature }) => {
+const Marker = ({ onClick, children, call }) => {
   const _onClick = () => {
-    onClick(feature.properties.description);
+    onClick(call);
   };
 
   return (
@@ -22,24 +20,26 @@ const Marker = ({ onClick, children, feature }) => {
 
 const Map = () => {
   const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markersRef = useRef({});
   const calls = useSelector(state => state.calls);
+  const [geocoder, setGeocoder] = useState(null);
 
-  // Initialize map when component mounts
   useEffect(() => {
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: 'mapbox://styles/mapbox/dark-v11', // Changed to satellite streets style
-      //center on berkeley
+      style: 'mapbox://styles/mapbox/dark-v11',
       center: [-122.272747, 37.871853],
-      zoom: 12, // Increased zoom level for better 3D view
-      pitch: 60, // Added pitch for 3D effect
-      bearing: -60, // Added bearing for 3D effect
-      antialias: true, // Smooth out edges for better rendering
-      attributionControl: false  
+      zoom: 12,
+      pitch: 60,
+      bearing: -60,
+      antialias: true,
+      attributionControl: false
     });
 
+    mapRef.current = map;
+
     map.on('style.load', () => {
-      // Add 3D terrain
       map.addSource('mapbox-dem', {
         'type': 'raster-dem',
         'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
@@ -48,7 +48,6 @@ const Map = () => {
       });
       map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
 
-      // Add sky layer for realistic environment
       map.addLayer({
         'id': 'sky',
         'type': 'sky',
@@ -60,28 +59,65 @@ const Map = () => {
       });
     });
 
-    // Render custom marker components
-    geoJson.features.forEach((feature) => {
-      const ref = React.createRef();
-      ref.current = document.createElement('div');
-      createRoot(ref.current).render(
-        <Marker onClick={markerClicked} feature={feature} />
-      );
-
-      new mapboxgl.Marker(ref.current)
-        .setLngLat(feature.geometry.coordinates)
-        .addTo(map);
-    });
-
-    // Add navigation control (the +/- zoom buttons)
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // Clean up on unmount
+    // Initialize geocoder
+    const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
+    const geocodingClient = mbxGeocoding({ accessToken: mapboxgl.accessToken });
+    setGeocoder(geocodingClient);
+
     return () => map.remove();
   }, []);
 
-  const markerClicked = (title) => {
-    window.alert(title);
+  useEffect(() => {
+    if (!geocoder) return;
+
+    // Update markers for each call
+    calls.forEach(async (call) => {
+      if (!call.location) return;
+
+      try {
+        const response = await geocoder.forwardGeocode({
+          query: call.location,
+          limit: 1
+        }).send();
+
+        if (response && response.body && response.body.features && response.body.features.length) {
+          const [lng, lat] = response.body.features[0].center;
+          
+          if (markersRef.current[call.id]) {
+            // Update existing marker
+            markersRef.current[call.id].setLngLat([lng, lat]);
+          } else {
+            // Create new marker
+            const markerNode = document.createElement('div');
+            const root = createRoot(markerNode);
+            root.render(<Marker onClick={markerClicked} call={call} />);
+
+            const marker = new mapboxgl.Marker(markerNode)
+              .setLngLat([lng, lat])
+              .addTo(mapRef.current);
+
+            markersRef.current[call.id] = marker;
+          }
+        }
+      } catch (error) {
+        console.error('Error geocoding location:', error);
+      }
+    });
+
+    // Remove markers for calls that no longer exist
+    Object.keys(markersRef.current).forEach(id => {
+      if (!calls.find(call => call.id === id)) {
+        markersRef.current[id].remove();
+        delete markersRef.current[id];
+      }
+    });
+  }, [calls, geocoder]);
+
+  const markerClicked = (call) => {
+    // Handle marker click (e.g., show call details)
+    console.log('Call clicked:', call);
   };
 
   return <div className="map-container" ref={mapContainerRef} />;
