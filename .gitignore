@@ -122,5 +122,3 @@ venv.bak/
 
 # Pyre type checker
 .pyre/
-
-service-account.json

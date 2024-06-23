@@ -40,11 +40,7 @@ jobs:
 
       # Build the app
       - name: Build
-        run: . venv/bin/activate
-
-      # Create service-account.json
-      - name: Create Google Application Credentials File
-        run: echo "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}" > app/service-account.json
+        run: . venv/bin/activate     
 
       - name: Create Zipfile archive of Dependencies
         run: |
