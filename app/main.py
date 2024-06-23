@@ -326,6 +326,24 @@ def get_address(address: FunctionCallingPayload):
                     current_data['location'] = "Unable to find address"
                 print("CURRENT_DATA=====",current_data)
                 doc_ref.set(current_data)
-                return {"message": "Location updated successfully"}
+                tool_call_id = address.message.call.id
+                response = ToolCallResponse(
+                    results=[
+                        ToolCallResult(
+                            toolCallId=tool_call_id,
+                            result=current_data['location']
+                        )
+                    ]
+                )
+                return response.dict()
             else:
-                return {"message": "Call not found"}
+                tool_call_id = address.message.call.id
+                response = ToolCallResponse(
+                    results=[
+                        ToolCallResult(
+                            toolCallId=tool_call_id,
+                            result="No location retrieved"
+                        )
+                    ]
+                )
+                return response.dict()
