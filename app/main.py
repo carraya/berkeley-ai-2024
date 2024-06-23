@@ -22,7 +22,7 @@ dotenv.load_dotenv(".env.example")
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
-default_app = firebase_admin.initialize_app(credential={
+default_app = firebase_admin.initialize_app(credential='''{
     "type": "service_account",
     "project_id": "berkeley2024-d8b6a",
     "private_key_id": "fb6491fdb8437a5b14a82448d34cf8e14b40452c",
@@ -32,9 +32,9 @@ default_app = firebase_admin.initialize_app(credential={
     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
     "token_uri": "https://oauth2.googleapis.com/token",
     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": r"https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-ez7q3%40berkeley2024-d8b6a.iam.gserviceaccount.com",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-ez7q3%40berkeley2024-d8b6a.iam.gserviceaccount.com",
     "universe_domain": "googleapis.com"
-})
+}''')
 db = firestore.client()
 
 
