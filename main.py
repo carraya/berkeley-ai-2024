@@ -96,11 +96,60 @@ call_locks = {}
 lock_dict_lock = threading.Lock()
 
 
+ICON_LIST = ["fire-extinguisher", "firetruck", "flame", "car",
+             "user", "users", "old", "clipboard-heart", "vaccine"]
+
+
+def get_summary_and_icon(conversation: str, dispatch_info: str):
+    # Get short summary
+    summary_prompt = f"""
+    Summarize the following emergency situation in 3-4 words.
+    Respond ONLY with the summary, nothing else.
+
+    Emergency details:
+    Dispatch Information: {dispatch_info}
+    Conversation Transcript: {conversation}
+
+    3-4 word summary:
+    """
+
+    summary_response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": summary_prompt}],
+        max_tokens=20,  # Limiting to ensure a short response
+        temperature=0.3  # Lower temperature for more focused output
+    )
+    short_summary = summary_response.choices[0].message.content.strip()
+
+    # Get icon
+    icon_prompt = f"""
+    Select the most appropriate icon for this emergency situation from the list below.
+    Respond ONLY with the icon name, nothing else.
+
+    Emergency details:
+    Dispatch Information: {dispatch_info}
+    Conversation Transcript: {conversation}
+
+    Icon options: fire-extinguisher, firetruck, flame, car, user, users, old, clipboard-heart, vaccine
+
+    Selected icon:
+    """
+
+    icon_response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": icon_prompt}],
+        max_tokens=20,  # Limiting to ensure a single icon
+        temperature=0.3  # Lower temperature for more focused output
+    )
+    selected_icon = icon_response.choices[0].message.content.strip()
+
+    return short_summary, selected_icon
+
+
 @app.post("/info/")
 def case_info(call_info: WebhookPayload):
     call_id = call_info.message.call.id
 
-    # Acquire the lock for this specific call_id
     with lock_dict_lock:
         if call_id not in call_locks:
             call_locks[call_id] = threading.Lock()
@@ -126,9 +175,7 @@ def case_info(call_info: WebhookPayload):
                 content = message.content
                 if content:
                     conversation += f"{role}: {content}\n"
-            print(f"THE CONVERSATION for call {call_id}:", conversation)
 
-            # Get the current document data
             doc = doc_ref.get()
             if doc.exists:
                 current_data = doc.to_dict()
@@ -137,15 +184,12 @@ def case_info(call_info: WebhookPayload):
                 current_data = {}
                 existing_situation = {}
 
-            # Add createdDate if it doesn't exist
             if 'createdDate' not in current_data:
                 current_data['createdDate'] = int(time.time())
 
-            # Set callStatus to "active" if it doesn't exist
             if 'callStatus' not in current_data:
                 current_data['callStatus'] = 'active'
 
-            # Prepare the prompt with existing situation and new conversation
             prompt = f"""
             Given the existing situation details:
             {json.dumps(existing_situation, indent=2)}
@@ -160,25 +204,30 @@ def case_info(call_info: WebhookPayload):
             """
 
             try:
-                response = openai.chat.completions.create(
+                response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": "user", "content": prompt}],
                     response_format={"type": "json_object"}
                 )
-                print(f"OpenAI response for call {call_id}:", response)
 
                 res = response.choices[0].message.content
                 new_info = json.loads(res)
 
-                # Merge new information with existing situation
                 for key, value in new_info.items():
                     if key not in existing_situation or existing_situation[key] != value:
                         existing_situation[key] = value
 
-                # Update the situation field in the current data
                 current_data['situation'] = existing_situation
 
-                # Set the updated data back to Firestore
+                # Get summary and icon
+                dispatch_info = current_data.get(
+                    'dispatchInformation', 'No dispatch information available.')
+                short_summary, selected_icon = get_summary_and_icon(
+                    conversation, dispatch_info)
+
+                current_data['shortSummary'] = short_summary
+                current_data['icon'] = selected_icon
+
                 doc_ref.set(current_data)
 
                 return {"message": f"Situation updated successfully for call {call_id}"}
@@ -186,11 +235,6 @@ def case_info(call_info: WebhookPayload):
                 print(f"Error processing call {call_id}: {str(e)}")
                 raise HTTPException(
                     status_code=500, detail=f"Error processing request: {str(e)}")
-
-    # Clean up the lock if the call is ended
-    if call_info.message.type == "end-of-call-report":
-        with lock_dict_lock:
-            call_locks.pop(call_id, None)
 
     return {"message": "Request processed"}
 
@@ -214,13 +258,11 @@ async def handle_dispatch(call_info: WebhookPayload):
     doc_ref = db.collection("calls").document(tool_call_id)
     doc = doc_ref.get()
 
-    dispatch_information = "There is no dispatch information available."
+    dispatch_information = None
     if doc.exists:
         call_data = doc.to_dict()
-        dispatch_information = call_data.get('dispatchInformation', False)
-
-        if dispatch_information:
-            dispatch_information = call_data.get('dispatchInformation', None)
+        dispatch_information = call_data.get(
+            'dispatchInformation', "We need to gather more information to dispatch help.")
 
     response = ToolCallResponse(
         results=[
