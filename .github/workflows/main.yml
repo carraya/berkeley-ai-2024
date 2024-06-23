@@ -38,9 +38,9 @@ jobs:
       - name: Install dependencies
         run: pip3 install -r requirements.txt
 
-      # Build the app
-      - name: Build
-        run: . venv/bin/activate
+      # Build the app and run tests
+      - name: Build and Run Test
+        run: . venv/bin/activate && pytest
 
       - name: Create Zipfile archive of Dependencies
         run: |
@@ -48,7 +48,7 @@ jobs:
           zip -r9 ../../../../api.zip .
 
       - name: Add App to Zipfile
-        run: zip -g ./api.zip -r .
+        run: cd ./app && zip -g ../api.zip -r .
 
       - name: Upload zip file artifact
         uses: actions/upload-artifact@v2
