@@ -1,0 +1,19 @@
+.app-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.dashboard-panel {
+  width: 300px; /* Adjust this value as needed */
+  height: 100%;
+  overflow-y: auto;
+  background-color: #f0f0f0; /* Adjust color as needed */
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.map-container {
+  flex: 1;
+  height: 100%;
+}
