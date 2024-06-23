@@ -1,23 +1,22 @@
 import styled from "styled-components";
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { ago } from '../backend/util';
-import { setupCallsListener } from '../backend/subscriptions';
 import * as allIcons from "tabler-icons-react";
 
 
 const StyledVerticalBorder = styled.div`
   align-items: flex-start;
   background-color: #000000;
-  border-color: var(--dashboardmintlifycomnero-5);
+  border-color: #1C1C1E;
   border-right-style: solid;
-  border-right-width: 0.56px;
+  border-right-width: 1px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   padding: 16px 0.56px 0px 0px;
   position: relative;
-  width: 350px;
+  width: 450px;
   user-select: none;
 
   & .container {
@@ -133,9 +132,10 @@ const StyledVerticalBorder = styled.div`
     padding: 8px;
     position: relative;
     width: 100%;
-  }
+    transition: background-color 0.3s ease; // Add smooth hover animation
+}
 
-  & .link:hover {
+& .link:hover {
     background-color: #ffffff1a; // Make the background slightly brighter on hover
 }
 
@@ -222,7 +222,20 @@ const StyledVerticalBorder = styled.div`
     height: 6px;
     position: relative;
     width: 6px;
+    animation: blinkBackground 1s infinite; // Add blinking animati
   }
+
+  @keyframes blinkBackground {
+    0% {
+        background-color: #22c55e;
+    }
+    50% {
+        background-color: transparent;
+    }
+    100% {
+        background-color: #22c55e;
+    }
+}
 
   & .margin {
     align-items: flex-start;
@@ -260,19 +273,44 @@ const StyledVerticalBorder = styled.div`
   }
 `;
 
-export const Sidebar = () => {
-    const calls = useSelector(state => state.calls);
-  const [expandedCall, setExpandedCall] = useState(null);
 
-  useEffect(() => {
-    const unsubscribe = setupCallsListener();
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+const HoverModal = styled.div`
+  position: fixed;
+  background-color: black;
+  color: white;
+  padding: 15px;
+  border-radius: 5px;
+  z-index: 1000;
+  pointer-events: none;
+  transition: opacity 0.2s ease-in-out;
+  max-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+`;
+
+export const Sidebar = () => {
+  const calls = useSelector(state => state.calls);
+  const [expandedCall, setExpandedCall] = useState(null);
+  const [hoverInfo, setHoverInfo] = useState(null);
 
   const toggleExpand = (callId) => {
     setExpandedCall(expandedCall === callId ? null : callId);
+  };
+
+  const handleMouseEnter = (e, call) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHoverInfo({
+      call: call,
+      x: rect.left + window.scrollX + rect.width / 2,
+      y: rect.top + window.scrollY - 40, // Position above the call chip
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setHoverInfo(null);
   };
 
   const sortedCalls = [...calls].sort((a, b) => b.createdDate - a.createdDate);
@@ -295,10 +333,16 @@ export const Sidebar = () => {
         </div>
         <div className="nav">
           {sortedCalls.map((call) => {
-            const IconToBeUsed = allIcons[call.icon] || allIcons['Activity']; // Fallback to a default icon if icon not found
+            const IconToBeUsed = allIcons[call.icon] || allIcons['Activity'];
 
             return (
-              <div className="link" key={call.id} onClick={() => toggleExpand(call.id)}>
+              <div 
+                className="link" 
+                key={call.id} 
+                onClick={() => toggleExpand(call.id)}
+                onMouseEnter={(e) => handleMouseEnter(e, call)}
+                onMouseLeave={handleMouseLeave}
+              >
                 <div className="frame-2">
                   <div className="frame-3">
                     <IconToBeUsed size={26} color="#ffffff" />
@@ -308,30 +352,40 @@ export const Sidebar = () => {
                       </div>
                     </div>
                   </div>
-                  {call.callStatus === "active" ? (
-                  <div className="group">
-                    <div className="container-wrapper">
-                      <div className="overlay-wrapper">
-                        <div className="overlay">
-                          <div className="background-wrapper">
-                            <div className="background" />
-                          </div>
-                          <div className="margin">
-                            <div className="text-wrapper-4">Live</div>
+                  {call.callStatus === "active" && (
+                    <div className="group">
+                      <div className="container-wrapper">
+                        <div className="overlay-wrapper">
+                          <div className="overlay">
+                            <div className="background-wrapper">
+                              <div className="background" />
+                            </div>
+                            <div className="margin">
+                              <div className="text-wrapper-4">Live</div>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  ) : null}
-                 
+                  )}
                 </div>
               </div>
-              );
-            })}
-          </div>
+            );
+          })}
+        </div>
         <div className="text-wrapper-5">Built by Yo Mama</div>
       </div>
+      {hoverInfo && (
+        <HoverModal
+          style={{
+            left: `${hoverInfo.x}px`,
+            top: `${hoverInfo.y}px`,
+            transform: 'translate(-50%, -100%)',
+          }}
+        >
+          {JSON.stringify(hoverInfo.call, null, 2)}
+        </HoverModal>
+      )}
     </StyledVerticalBorder>
   );
 };

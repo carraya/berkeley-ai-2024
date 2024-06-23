@@ -1,15 +1,14 @@
 import mapboxgl from 'mapbox-gl';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { createRoot } from 'react-dom/client';
-import geoJson from '../pages/chicago-parks.json';
 import './Map.css';
 
-mapboxgl.accessToken =
-  'pk.eyJ1IjoiYmxhaXJvcmNoYXJkIiwiYSI6ImNsNWZzeGtrNDEybnMzaXA4eHRuOGU5NDUifQ.s59N5x1EqfyPZxeImzNwbw';
+mapboxgl.accessToken = 'pk.eyJ1IjoiYmxhaXJvcmNoYXJkIiwiYSI6ImNsNWZzeGtrNDEybnMzaXA4eHRuOGU5NDUifQ.s59N5x1EqfyPZxeImzNwbw';
 
-const Marker = ({ onClick, children, feature }) => {
+const Marker = ({ onClick, children, call }) => {
   const _onClick = () => {
-    onClick(feature.properties.description);
+    onClick(call);
   };
 
   return (
@@ -21,22 +20,28 @@ const Marker = ({ onClick, children, feature }) => {
 
 const Map = () => {
   const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markersRef = useRef({});
+  const animationRef = useRef(null);
+  const calls = useSelector(state => state.calls);
+  const [geocoder, setGeocoder] = useState(null);
+  const [markers, setMarkers] = useState([]);
 
-  // Initialize map when component mounts
   useEffect(() => {
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: 'mapbox://styles/blairorchard/clxqttgt300ks01o7cw004i5f', // Changed to satellite streets style
-      //center on berkeley
+      style: 'mapbox://styles/mapbox/dark-v11',
       center: [-122.272747, 37.871853],
-      zoom: 12, // Increased zoom level for better 3D view
-      pitch: 60, // Added pitch for 3D effect
-      bearing: -60, // Added bearing for 3D effect
-      antialias: true // Smooth out edges for better rendering
+      zoom: 12,
+      pitch: 60,
+      bearing: -60,
+      antialias: true,
+      attributionControl: false
     });
 
+    mapRef.current = map;
+
     map.on('style.load', () => {
-      // Add 3D terrain
       map.addSource('mapbox-dem', {
         'type': 'raster-dem',
         'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
@@ -45,7 +50,6 @@ const Map = () => {
       });
       map.setTerrain({ 'source': 'mapbox-dem', 'exaggeration': 1.5 });
 
-      // Add sky layer for realistic environment
       map.addLayer({
         'id': 'sky',
         'type': 'sky',
@@ -57,28 +61,110 @@ const Map = () => {
       });
     });
 
-    // Render custom marker components
-    geoJson.features.forEach((feature) => {
-      const ref = React.createRef();
-      ref.current = document.createElement('div');
-      createRoot(ref.current).render(
-        <Marker onClick={markerClicked} feature={feature} />
-      );
-
-      new mapboxgl.Marker(ref.current)
-        .setLngLat(feature.geometry.coordinates)
-        .addTo(map);
-    });
-
-    // Add navigation control (the +/- zoom buttons)
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // Clean up on unmount
-    return () => map.remove();
+    // Initialize geocoder
+    const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
+    const geocodingClient = mbxGeocoding({ accessToken: mapboxgl.accessToken });
+    setGeocoder(geocodingClient);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      map.remove();
+    };
   }, []);
 
-  const markerClicked = (title) => {
-    window.alert(title);
+  useEffect(() => {
+    if (!geocoder || !mapRef.current) return;
+
+    const newMarkers = [];
+
+    // Update markers for each call
+    const updateMarkers = async () => {
+      for (const call of calls) {
+        if (!call.location) continue;
+
+        try {
+          const response = await geocoder.forwardGeocode({
+            query: call.location,
+            limit: 1
+          }).send();
+
+          if (response && response.body && response.body.features && response.body.features.length) {
+            const [lng, lat] = response.body.features[0].center;
+            
+            if (markersRef.current[call.id]) {
+              // Update existing marker
+              markersRef.current[call.id].setLngLat([lng, lat]);
+            } else {
+              // Create new marker
+              const markerNode = document.createElement('div');
+              const root = createRoot(markerNode);
+              root.render(<Marker onClick={markerClicked} call={call} />);
+
+              const marker = new mapboxgl.Marker(markerNode)
+                .setLngLat([lng, lat])
+                .addTo(mapRef.current);
+
+              markersRef.current[call.id] = marker;
+            }
+            newMarkers.push({ id: call.id, lngLat: [lng, lat] });
+          }
+        } catch (error) {
+          console.error('Error geocoding location:', error);
+        }
+      }
+
+      // Remove markers for calls that no longer exist
+      Object.keys(markersRef.current).forEach(id => {
+        if (!calls.find(call => call.id === id)) {
+          markersRef.current[id].remove();
+          delete markersRef.current[id];
+        }
+      });
+
+      setMarkers(newMarkers);
+    };
+
+    updateMarkers();
+  }, [calls, geocoder]);
+
+  useEffect(() => {
+    if (markers.length === 0 || !mapRef.current) return;
+
+    let currentIndex = 0;
+    const animateCamera = () => {
+      const marker = markers[currentIndex];
+      mapRef.current.easeTo({
+        center: marker.lngLat,
+        zoom: 15,
+        duration: 3000,
+        pitch: 60,
+        bearing: (currentIndex * 45) % 360
+      });
+
+      currentIndex = (currentIndex + 1) % markers.length;
+      
+      // Schedule the next animation
+      animationRef.current = setTimeout(() => {
+        requestAnimationFrame(animateCamera);
+      }, 6000); // 3 seconds for animation + 3 seconds pause
+    };
+
+    animateCamera();
+
+    return () => {
+      if (animationRef.current) {
+        clearTimeout(animationRef.current);
+      }
+    };
+  }, [markers]);
+
+  const markerClicked = (call) => {
+    // Handle marker click (e.g., show call details)
+    console.log('Call clicked:', call);
   };
 
   return <div className="map-container" ref={mapContainerRef} />;
