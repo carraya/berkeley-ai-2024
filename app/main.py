@@ -16,6 +16,7 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+handler = Mangum(app=app)
 
 dotenv.load_dotenv(".env.example")
 
@@ -120,7 +121,7 @@ def case_info(call_info: WebhookPayload):
             content = message.content
             if content:
                 conversation += f"{role}: {content}\n"
-        logging.info(conversation)
+        handler.logger.info(conversation)
     
     
         response = openai.chat.completions.create(
@@ -128,12 +129,10 @@ def case_info(call_info: WebhookPayload):
             messages=[{"role": "user", "content": f"Extract situation details/information from the following 911 operator transcript and provide it in JSON format. IF THE INFORMATION IS NOT GIVEN, DO NOT ATTEMPT TO FILL THAT ATTRIBUTE IN THE JSON. RETURN NONE IF NO VALUABLE INFORMATION CAN BE EXTRACTED. QUOTE THE USER FOR EACH PIECE OF INFORMATION YOU RECORD IN THE FOLLOWING STRUCUTRE: {{'location': {{'source': '<user quote>', 'info': '<extracted information>'}}}}:\n\n{conversation}"}],
             response_format={ "type": "json_object" }
         )
-        logging.info(response)
+        handler.logger.info(response)
         
         doc_ref = db.collection('calls').document(call_info.message.call.id)
         res = response.choices[0].message.content
         res_json = json.loads(res)
         doc_ref.set({"situation": res_json})
         return {"message": "Situation added successfully"}
-
-handler = Mangum(app=app)
