@@ -9,6 +9,7 @@ from firebase_admin import firestore
 import openai
 import os
 import json
+from mangum import Mangum
 
 dotenv.load_dotenv()
 
@@ -128,3 +129,5 @@ def case_info(call_info: WebhookPayload):
         res_json = json.loads(res)
         doc_ref.set({"situation": res_json})
         return {"message": "Situation added successfully"}
+
+handler = Mangum(app=app)
