@@ -69,3 +69,16 @@ class ToolCallResult(BaseModel):
 
 class ToolCallResponse(BaseModel):
     results: List[ToolCallResult]
+
+class FunctionCalling(BaseModel):
+    type: str
+    role: Optional[str] = None
+    transcriptType: Optional[str] = None
+    transcript: Optional[str] = None
+    functionCall: FunctionCall
+    call: Call
+    artifact: Artifact
+    timestamp: datetime
+    
+class FunctionCallingPayload(BaseModel):
+    message: FunctionCalling

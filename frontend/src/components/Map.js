@@ -22,8 +22,10 @@ const Map = () => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({});
+  const animationRef = useRef(null);
   const calls = useSelector(state => state.calls);
   const [geocoder, setGeocoder] = useState(null);
+  const [markers, setMarkers] = useState([]);
 
   useEffect(() => {
     const map = new mapboxgl.Map({
@@ -66,54 +68,99 @@ const Map = () => {
     const geocodingClient = mbxGeocoding({ accessToken: mapboxgl.accessToken });
     setGeocoder(geocodingClient);
 
-    return () => map.remove();
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      map.remove();
+    };
   }, []);
 
   useEffect(() => {
-    if (!geocoder) return;
+    if (!geocoder || !mapRef.current) return;
+
+    const newMarkers = [];
 
     // Update markers for each call
-    calls.forEach(async (call) => {
-      if (!call.location) return;
+    const updateMarkers = async () => {
+      for (const call of calls) {
+        if (!call.location) continue;
 
-      try {
-        const response = await geocoder.forwardGeocode({
-          query: call.location,
-          limit: 1
-        }).send();
+        try {
+          const response = await geocoder.forwardGeocode({
+            query: call.location,
+            limit: 1
+          }).send();
 
-        if (response && response.body && response.body.features && response.body.features.length) {
-          const [lng, lat] = response.body.features[0].center;
-          
-          if (markersRef.current[call.id]) {
-            // Update existing marker
-            markersRef.current[call.id].setLngLat([lng, lat]);
-          } else {
-            // Create new marker
-            const markerNode = document.createElement('div');
-            const root = createRoot(markerNode);
-            root.render(<Marker onClick={markerClicked} call={call} />);
+          if (response && response.body && response.body.features && response.body.features.length) {
+            const [lng, lat] = response.body.features[0].center;
+            
+            if (markersRef.current[call.id]) {
+              // Update existing marker
+              markersRef.current[call.id].setLngLat([lng, lat]);
+            } else {
+              // Create new marker
+              const markerNode = document.createElement('div');
+              const root = createRoot(markerNode);
+              root.render(<Marker onClick={markerClicked} call={call} />);
 
-            const marker = new mapboxgl.Marker(markerNode)
-              .setLngLat([lng, lat])
-              .addTo(mapRef.current);
+              const marker = new mapboxgl.Marker(markerNode)
+                .setLngLat([lng, lat])
+                .addTo(mapRef.current);
 
-            markersRef.current[call.id] = marker;
+              markersRef.current[call.id] = marker;
+            }
+            newMarkers.push({ id: call.id, lngLat: [lng, lat] });
           }
+        } catch (error) {
+          console.error('Error geocoding location:', error);
         }
-      } catch (error) {
-        console.error('Error geocoding location:', error);
       }
-    });
 
-    // Remove markers for calls that no longer exist
-    Object.keys(markersRef.current).forEach(id => {
-      if (!calls.find(call => call.id === id)) {
-        markersRef.current[id].remove();
-        delete markersRef.current[id];
-      }
-    });
+      // Remove markers for calls that no longer exist
+      Object.keys(markersRef.current).forEach(id => {
+        if (!calls.find(call => call.id === id)) {
+          markersRef.current[id].remove();
+          delete markersRef.current[id];
+        }
+      });
+
+      setMarkers(newMarkers);
+    };
+
+    updateMarkers();
   }, [calls, geocoder]);
+
+  useEffect(() => {
+    if (markers.length === 0 || !mapRef.current) return;
+
+    let currentIndex = 0;
+    const animateCamera = () => {
+      const marker = markers[currentIndex];
+      mapRef.current.easeTo({
+        center: marker.lngLat,
+        zoom: 15,
+        duration: 3000,
+        pitch: 60,
+        bearing: (currentIndex * 45) % 360
+      });
+
+      currentIndex = (currentIndex + 1) % markers.length;
+      
+      // Schedule the next animation
+      animationRef.current = setTimeout(() => {
+        requestAnimationFrame(animateCamera);
+      }, 6000); // 3 seconds for animation + 3 seconds pause
+    };
+
+    animateCamera();
+
+    return () => {
+      if (animationRef.current) {
+        clearTimeout(animationRef.current);
+      }
+    };
+  }, [markers]);
 
   const markerClicked = (call) => {
     // Handle marker click (e.g., show call details)
