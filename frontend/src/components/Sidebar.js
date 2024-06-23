@@ -222,7 +222,7 @@ const StyledVerticalBorder = styled.div`
     height: 6px;
     position: relative;
     width: 6px;
-    animation: blinkBackground 1s infinite; // Add blinking animati
+    animation: blinkBackground 1s infinite; // Add blinking animation
   }
 
   @keyframes blinkBackground {

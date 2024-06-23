@@ -3,11 +3,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { createRoot } from 'react-dom/client';
 import emergencyData from '../static/berkeleyEmergencyResponse.json';
-
 import './Map.css';
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiYmxhaXJvcmNoYXJkIiwiYSI6ImNsNWZzeGtrNDEybnMzaXA4eHRuOGU5NDUifQ.s59N5x1EqfyPZxeImzNwbw';
-console.log(emergencyData);
 
 const Marker = ({ onClick, children, call }) => {
   const _onClick = () => {
@@ -79,7 +77,7 @@ const Map = () => {
           'circle-stroke-color': 'white'
         }
       });
-      
+
       map.addSource('mapbox-dem', {
         'type': 'raster-dem',
         'url': 'mapbox://mapbox.mapbox-terrain-dem-v1',
@@ -99,7 +97,7 @@ const Map = () => {
       });
     });
 
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    // map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
     // Initialize geocoder
     const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
@@ -119,10 +117,71 @@ const Map = () => {
 
     const newMarkers = [];
 
-    // Update markers for each call
+    const getNearestStation = (type, callLocation) => {
+      const stations = emergencyData.features.filter(feature => feature.properties.type === type);
+      let nearestStation = null;
+      let minDistance = Infinity;
+
+      stations.forEach(station => {
+        const [stationLng, stationLat] = station.geometry.coordinates;
+        const distance = Math.sqrt(
+          Math.pow(callLocation[0] - stationLng, 2) + Math.pow(callLocation[1] - stationLat, 2)
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestStation = station.geometry.coordinates;
+        }
+      });
+
+      return nearestStation;
+    };
+
+    const getRoute = async (start, end, layerId, lineColor) => {
+      const query = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
+        { method: 'GET' }
+      );
+      const json = await query.json();
+      const data = json.routes[0];
+      const route = data.geometry.coordinates;
+      const geojson = {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: route
+        }
+      };
+
+      if (mapRef.current.getSource(layerId)) {
+        mapRef.current.getSource(layerId).setData(geojson);
+      } else {
+        mapRef.current.addLayer({
+          id: layerId,
+          type: 'line',
+          source: {
+            type: 'geojson',
+            data: geojson
+          },
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': lineColor,
+            'line-width': 5,
+            'line-opacity': 0.75
+          }
+        });
+      }
+    };
+
     const updateMarkers = async () => {
       for (const call of calls) {
         if (!call.location) continue;
+
+        //make sure callStatus is active
+        // if (call.callStatus !== "active") continue;
 
         try {
           const response = await geocoder.forwardGeocode({
@@ -132,7 +191,7 @@ const Map = () => {
 
           if (response && response.body && response.body.features && response.body.features.length) {
             const [lng, lat] = response.body.features[0].center;
-            
+
             if (markersRef.current[call.id]) {
               // Update existing marker
               markersRef.current[call.id].setLngLat([lng, lat]);
@@ -149,6 +208,22 @@ const Map = () => {
               markersRef.current[call.id] = marker;
             }
             newMarkers.push({ id: call.id, lngLat: [lng, lat] });
+
+            const callLocation = [lng, lat];
+
+            if (call.dispatchInformation && call.dispatchInformation.fire) {
+              const nearestFireStation = getNearestStation('Fire Station', callLocation);
+              if (nearestFireStation) {
+                getRoute(nearestFireStation, callLocation, `fire-route-${call.id}`, 'red');
+              }
+            }
+
+            if (call.dispatchInformation && call.dispatchInformation.police) {
+              const nearestPoliceStation = getNearestStation('Police Station', callLocation);
+              if (nearestPoliceStation) {
+                getRoute(nearestPoliceStation, callLocation, `police-route-${call.id}`, 'blue');
+              }
+            }
           }
         } catch (error) {
           console.error('Error geocoding location:', error);
@@ -184,15 +259,15 @@ const Map = () => {
       });
 
       currentIndex = (currentIndex + 1) % markers.length;
-      
+
       // Schedule the next animation
-      animationRef.current = setTimeout(() => {
-        requestAnimationFrame(animateCamera);
-      }, 6000); // 3 seconds for animation + 3 seconds pause
+      animationRef.current = setTimeout(animateCamera, 5000);
     };
 
+    // Start the animation loop
     animateCamera();
 
+    // Clean up on component unmount
     return () => {
       if (animationRef.current) {
         clearTimeout(animationRef.current);
@@ -200,12 +275,11 @@ const Map = () => {
     };
   }, [markers]);
 
-  const markerClicked = (call) => {
-    // Handle marker click (e.g., show call details)
-    console.log('Call clicked:', call);
+  const markerClicked = call => {
+    console.log('Marker clicked:', call);
   };
 
-  return <div className="map-container" ref={mapContainerRef} />;
+  return <div ref={mapContainerRef} className="map-container" />;
 };
 
 export default Map;
