@@ -114,6 +114,14 @@ from threading import Lock
 last_call_time = 0
 lock = Lock()
 
+
+@app.post("/save")
+def save_to_firebase(string):
+    doc_ref = db.collection('idk').document(string)
+    
+    doc_ref.set({"string": string})
+    return JSONResponse(status_code=200, content={"message": "Situation added successfully"})
+
 @app.post("/info/")
 def case_info(call_info: WebhookPayload):
     global last_call_time
