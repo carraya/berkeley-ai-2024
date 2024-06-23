@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from models import Suspect, CallInfo
 from pydantic import BaseModel
 from datetime import datetime
@@ -153,7 +154,8 @@ def case_info(call_info: WebhookPayload):
         doc_ref = db.collection('calls').document(call_info.message.call.id)
         res = response.choices[0].message.content
         res_json = json.loads(res)
+        
         doc_ref.set({"situation": res_json})
-        return {"message": "Situation added successfully"}
+        return JSONResponse(status_code=200, content={"message": "Situation added successfully"})
     
 handler = Mangum(app=app, lifespan="off")
