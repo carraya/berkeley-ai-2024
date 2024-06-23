@@ -11,7 +11,7 @@ import os
 import json
 from mangum import Mangum
 
-dotenv.load_dotenv()
+dotenv.load_dotenv(".env.example")
 
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
