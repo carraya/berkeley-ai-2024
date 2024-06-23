@@ -1,10 +1,6 @@
-from threading import Lock
 import threading
-from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, Request
-from models import Suspect, CallInfo
-from pydantic import BaseModel
-from datetime import datetime
+from models import WebhookPayload, ToolCallResponse, ToolCallResult
 import firebase_admin
 import dotenv
 from firebase_admin import firestore
@@ -32,72 +28,13 @@ def read_root():
     return {"Hello": "World"}
 
 
-class FunctionCall(BaseModel):
-    name: str
-    parameters: Dict[str, Optional[str]] = {}
-
-
-class ToolCall(BaseModel):
-    id: str
-    type: str
-    function: FunctionCall
-
-
-class Call(BaseModel):
-    id: str
-    orgId: str
-    createdAt: datetime
-    updatedAt: datetime
-    type: str
-    status: str
-    assistantId: Optional[str] = None
-    webCallUrl: Optional[str] = None
-
-
-class Message(BaseModel):
-    role: Optional[str] = None
-    message: Optional[str] = None
-    time: float
-    endTime: Optional[float] = None
-    secondsFromStart: float
-    source: Optional[str] = ""
-    duration: Optional[float] = None
-    toolCalls: Optional[List[ToolCall]] = None
-
-
-class OpenAIFormattedMessage(BaseModel):
-    role: str
-    content: Optional[str] = None
-    tool_calls: Optional[List[ToolCall]] = None
-
-
-class Artifact(BaseModel):
-    messages: List[Message]
-    messagesOpenAIFormatted: List[OpenAIFormattedMessage]
-
-
-class FunctionCallMessage(BaseModel):
-    type: str
-    role: Optional[str] = None
-    transcriptType: Optional[str] = None
-    transcript: Optional[str] = None
-    # functionCall: FunctionCall
-    call: Call
-    artifact: Artifact
-    timestamp: datetime
-
-
-class WebhookPayload(BaseModel):
-    message: FunctionCallMessage
-
-
 # Dictionary to store locks for each call_id
 call_locks = {}
 lock_dict_lock = threading.Lock()
 
 
-ICON_LIST = ["fire-extinguisher", "firetruck", "flame", "car",
-             "user", "users", "old", "clipboard-heart", "vaccine"]
+ICON_LIST = ["FireHydrant", "Firetruck", "Flame", "Car", "Plane",
+             "User", "Users", "Old", "ClipboardHeart", "Vaccine"]
 
 
 def get_summary_and_icon(conversation: str, dispatch_info: str):
@@ -239,18 +176,6 @@ def case_info(call_info: WebhookPayload):
     return {"message": "Request processed"}
 
 
-handler = Mangum(app=app)
-
-
-class ToolCallResult(BaseModel):
-    toolCallId: str
-    result: str  # This should be a string, not a dict
-
-
-class ToolCallResponse(BaseModel):
-    results: List[ToolCallResult]
-
-
 @app.post("/dispatch/")
 async def handle_dispatch(call_info: WebhookPayload):
     tool_call_id = call_info.message.call.id
@@ -274,3 +199,5 @@ async def handle_dispatch(call_info: WebhookPayload):
     )
     # print(response)
     return response.dict()
+
+handler = Mangum(app=app)
