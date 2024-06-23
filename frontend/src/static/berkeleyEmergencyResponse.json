@@ -1,0 +1,108 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "type": "Police Station",
+                "description": "Berkeley Police Department",
+                "address": "2100 Martin Luther King Jr Way, Berkeley, CA 94704"
+            },
+            "geometry": {
+                "coordinates": [-122.2731585825655, 37.87027177301037],
+                "type": "Point"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "type": "Fire Station",
+                "description": "Fire Station 1",
+                "address": "2442 Eighth St, Berkeley, CA 94710",
+                "ambulance": true
+            },
+            "geometry": {
+                "coordinates": [-122.29324758750369, 37.86067649047486],
+                "type": "Point"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "type": "Fire Station",
+                "description": "Fire Station 2",
+                "address": "2029 Berkeley Way, Berkeley, CA 94704",
+                "ambulance": true
+            },
+            "geometry": {
+                "coordinates": [-122.26930693345055, 37.873155144658654],
+                "type": "Point"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "type": "Fire Station",
+                "description": "Fire Station 3",
+                "address": "2710 Russell St, Berkeley, CA 94705",
+                "ambulance": true
+            },
+            "geometry": {
+                "coordinates": [-122.25251664151254, 37.858308619304964],
+                "type": "Point"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "type": "Fire Station",
+                "description": "Fire Station 4",
+                "address": "1900 Marin Ave, Berkeley, CA 94707",
+                "ambulance": true
+            },
+            "geometry": {
+                "coordinates": [-122.27603538997029, 37.88865915947094],
+                "type": "Point"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "type": "Fire Station",
+                "description": "Fire Station 5",
+                "address": "2680 Shattuck Ave, Berkeley, CA 94704",
+                "ambulance": true
+            },
+            "geometry": {
+                "coordinates": [-122.26754704604163, 37.86065952950146],
+                "type": "Point"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "type": "Fire Station",
+                "description": "Fire Station 6",
+                "address": "999 Cedar St, Berkeley, CA 94710",
+                "ambulance": true
+            },
+            "geometry": {
+                "coordinates": [-122.29670305215946, 37.87489982511095],
+                "type": "Point"
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "type": "Fire Station",
+                "description": "Fire Station 7",
+                "address": "3000 Shasta Rd, Berkeley, CA 94708",
+                "ambulance": true
+            },
+            "geometry": {
+                "coordinates": [-122.25139357220027, 37.89101492288936],
+                "type": "Point"
+            }
+        }
+    ]
+}
